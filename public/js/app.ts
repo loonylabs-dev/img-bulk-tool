@@ -29,6 +29,32 @@ interface ProcessResult {
   }[];
 }
 
+interface LayerData {
+  file: File;
+  image: HTMLImageElement;
+  visible: boolean;
+  scale: number;
+  x: number;
+  y: number;
+}
+
+interface LayerExportOptions {
+  outputSize: number;
+  prefix: string;
+  quality: number;
+}
+
+interface LayerPreset {
+  name: string;
+  guideSize: number;
+  layers: {
+    visible: boolean;
+    scale: number;
+    x: number;
+    y: number;
+  }[];
+}
+
 class ImageProcessor {
   private images: ImageFile[] = [];
   private dropZone: HTMLElement;
@@ -53,6 +79,7 @@ class ImageProcessor {
     this.resultsList = document.getElementById('resultsList')!;
 
     this.initEventListeners();
+    this.initTabSystem();
   }
 
   private initEventListeners(): void {
@@ -408,9 +435,588 @@ class ImageProcessor {
     const savings = ((original - compressed) / original) * 100;
     return Math.round(savings);
   }
+
+  private initTabSystem(): void {
+    // Wait for DOM to be fully loaded
+    const initTabs = () => {
+      const tabBtns = document.querySelectorAll('.tab-btn');
+      const tabPanels = document.querySelectorAll('.tab-panel');
+
+      if (tabBtns.length === 0) {
+        return;
+      }
+
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const target = e.target as HTMLButtonElement;
+          const tabName = target.dataset.tab;
+
+          // Remove active class from all buttons and panels
+          tabBtns.forEach(b => b.classList.remove('active'));
+          tabPanels.forEach(p => p.classList.remove('active'));
+
+          // Add active class to clicked button and corresponding panel
+          target.classList.add('active');
+          const targetPanel = document.getElementById(`${tabName}-tab`);
+          if (targetPanel) {
+            targetPanel.classList.add('active');
+          }
+        });
+      });
+    };
+
+    // Try to initialize immediately, or wait for DOM
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTabs);
+    } else {
+      initTabs();
+    }
+  }
+}
+
+class LayerEditor {
+  private layers: (LayerData | null)[] = [null, null, null];
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private showGuide: boolean = true;
+  private guideSize: number = 200;
+
+  constructor() {
+    this.canvas = document.getElementById('layerCanvas') as HTMLCanvasElement;
+    this.ctx = this.canvas.getContext('2d')!;
+    
+    this.initLayerEventListeners();
+    this.renderCanvas();
+  }
+
+  private initLayerEventListeners(): void {
+    // Layer upload event listeners
+    for (let i = 0; i < 3; i++) {
+      const dropZone = document.getElementById(`layerDropZone${i}`)!;
+      const input = document.getElementById(`layerInput${i}`) as HTMLInputElement;
+      const removeBtn = document.getElementById(`layerRemove${i}`)!;
+
+      dropZone.addEventListener('click', () => input.click());
+      dropZone.addEventListener('dragover', (e) => this.handleLayerDragOver(e, i));
+      dropZone.addEventListener('dragleave', (e) => this.handleLayerDragLeave(e, i));
+      dropZone.addEventListener('drop', (e) => this.handleLayerDrop(e, i));
+
+      input.addEventListener('change', (e) => this.handleLayerFileSelect(e, i));
+      removeBtn.addEventListener('click', () => this.removeLayer(i));
+
+      // Layer control listeners
+      const visibleInput = document.getElementById(`layerVisible${i}`) as HTMLInputElement;
+      const scaleInput = document.getElementById(`layerScale${i}`) as HTMLInputElement;
+      const xInput = document.getElementById(`layerX${i}`) as HTMLInputElement;
+      const yInput = document.getElementById(`layerY${i}`) as HTMLInputElement;
+
+      visibleInput.addEventListener('change', () => this.updateLayerVisibility(i));
+      scaleInput.addEventListener('input', () => this.updateLayerScale(i));
+      xInput.addEventListener('input', () => this.updateLayerPosition(i));
+      yInput.addEventListener('input', () => this.updateLayerPosition(i));
+    }
+
+    // Canvas controls
+    const showGuideInput = document.getElementById('showGuide') as HTMLInputElement;
+    const guideSizeSlider = document.getElementById('guideSize') as HTMLInputElement;
+    const guideSizeNumberInput = document.getElementById('guideSizeInput') as HTMLInputElement;
+
+    showGuideInput.addEventListener('change', () => {
+      this.showGuide = showGuideInput.checked;
+      this.renderCanvas();
+    });
+
+    // Guide size slider
+    guideSizeSlider.addEventListener('input', () => {
+      this.guideSize = parseInt(guideSizeSlider.value);
+      guideSizeNumberInput.value = this.guideSize.toString();
+      this.renderCanvas();
+    });
+
+    // Guide size number input
+    guideSizeNumberInput.addEventListener('input', () => {
+      const value = parseInt(guideSizeNumberInput.value);
+      if (value >= 50 && value <= 300) {
+        this.guideSize = value;
+        guideSizeSlider.value = value.toString();
+        this.renderCanvas();
+      }
+    });
+
+    // Export button
+    const exportBtn = document.getElementById('exportLayers') as HTMLButtonElement;
+    exportBtn.addEventListener('click', () => this.exportLayers());
+
+    // Output size change listener
+    const outputSizeSelect = document.getElementById('outputSize') as HTMLSelectElement;
+    outputSizeSelect.addEventListener('change', () => this.handleOutputSizeChange());
+
+    // Quality slider listener
+    const qualitySlider = document.getElementById('layerQuality') as HTMLInputElement;
+    const qualityValue = document.getElementById('layerQualityValue')!;
+    qualitySlider.addEventListener('input', () => {
+      qualityValue.textContent = qualitySlider.value + '%';
+    });
+
+    // Preset event listeners
+    const loadPresetBtn = document.getElementById('loadPreset') as HTMLButtonElement;
+    const savePresetBtn = document.getElementById('savePreset') as HTMLButtonElement;
+    const deletePresetBtn = document.getElementById('deletePreset') as HTMLButtonElement;
+    
+    loadPresetBtn.addEventListener('click', () => this.loadPreset());
+    savePresetBtn.addEventListener('click', () => this.savePreset());
+    deletePresetBtn.addEventListener('click', () => this.deletePreset());
+
+    // Load presets on initialization
+    this.loadPresetList();
+    this.createDefaultPresets();
+  }
+
+  private handleLayerDragOver(e: DragEvent, layerIndex: number): void {
+    e.preventDefault();
+    e.stopPropagation();
+    const dropZone = document.getElementById(`layerDropZone${layerIndex}`)!;
+    dropZone.classList.add('drag-over');
+  }
+
+  private handleLayerDragLeave(e: DragEvent, layerIndex: number): void {
+    e.preventDefault();
+    e.stopPropagation();
+    const dropZone = document.getElementById(`layerDropZone${layerIndex}`)!;
+    dropZone.classList.remove('drag-over');
+  }
+
+  private handleLayerDrop(e: DragEvent, layerIndex: number): void {
+    e.preventDefault();
+    e.stopPropagation();
+    const dropZone = document.getElementById(`layerDropZone${layerIndex}`)!;
+    dropZone.classList.remove('drag-over');
+
+    const files = Array.from(e.dataTransfer?.files || []);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    
+    if (imageFile) {
+      this.loadLayer(imageFile, layerIndex);
+    }
+  }
+
+  private handleLayerFileSelect(e: Event, layerIndex: number): void {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    
+    if (file && file.type.startsWith('image/')) {
+      this.loadLayer(file, layerIndex);
+    }
+  }
+
+  private loadLayer(file: File, layerIndex: number): void {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      img.src = e.target?.result as string;
+      
+      img.onload = () => {
+        // Calculate initial scale to fit the output size
+        const initialScale = this.calculateInitialScale(img);
+        
+        this.layers[layerIndex] = {
+          file,
+          image: img,
+          visible: true,
+          scale: initialScale,
+          x: 0,
+          y: 0
+        };
+
+        this.updateLayerPreview(layerIndex, img.src);
+        this.updateLayerControls(layerIndex);
+        this.updateExportButton();
+        this.renderCanvas();
+      };
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  private calculateInitialScale(img: HTMLImageElement): number {
+    const outputSize = parseInt((document.getElementById('outputSize') as HTMLSelectElement).value);
+    const canvasSize = this.canvas.width; // Canvas preview size (400px)
+    
+    // Calculate scale to fit the larger dimension within the output size
+    const scaleToOutput = Math.min(outputSize / img.width, outputSize / img.height);
+    
+    // Adjust for canvas preview (scale relative to canvas size vs output size)
+    const canvasToOutputRatio = canvasSize / outputSize;
+    const previewScale = scaleToOutput * canvasToOutputRatio;
+    
+    return Math.round(previewScale * 100) / 100; // Round to 2 decimal places
+  }
+
+  private updateLayerControls(layerIndex: number): void {
+    const layer = this.layers[layerIndex];
+    if (!layer) return;
+
+    // Update scale control
+    const scaleInput = document.getElementById(`layerScale${layerIndex}`) as HTMLInputElement;
+    const scaleValue = document.getElementById(`layerScaleValue${layerIndex}`)!;
+    
+    scaleInput.value = layer.scale.toString();
+    scaleValue.textContent = `${layer.scale.toFixed(2)}x`;
+
+    // Position controls remain at 0
+    document.getElementById(`layerXValue${layerIndex}`)!.textContent = '0px';
+    document.getElementById(`layerYValue${layerIndex}`)!.textContent = '0px';
+  }
+
+  private updateLayerPreview(layerIndex: number, src: string): void {
+    const dropZone = document.getElementById(`layerDropZone${layerIndex}`)!;
+    const preview = document.getElementById(`layerPreview${layerIndex}`)!;
+    const img = document.getElementById(`layerImg${layerIndex}`) as HTMLImageElement;
+
+    dropZone.style.display = 'none';
+    img.src = src;
+    preview.style.display = 'block';
+    preview.classList.add('active');
+  }
+
+  private removeLayer(layerIndex: number): void {
+    this.layers[layerIndex] = null;
+    
+    const dropZone = document.getElementById(`layerDropZone${layerIndex}`)!;
+    const preview = document.getElementById(`layerPreview${layerIndex}`)!;
+
+    dropZone.style.display = 'flex';
+    preview.style.display = 'none';
+    preview.classList.remove('active');
+
+    // Reset controls
+    (document.getElementById(`layerVisible${layerIndex}`) as HTMLInputElement).checked = true;
+    (document.getElementById(`layerScale${layerIndex}`) as HTMLInputElement).value = '1';
+    (document.getElementById(`layerX${layerIndex}`) as HTMLInputElement).value = '0';
+    (document.getElementById(`layerY${layerIndex}`) as HTMLInputElement).value = '0';
+    
+    this.updateControlLabels(layerIndex);
+    this.updateExportButton();
+    this.renderCanvas();
+  }
+
+  private updateLayerVisibility(layerIndex: number): void {
+    if (this.layers[layerIndex]) {
+      const visible = (document.getElementById(`layerVisible${layerIndex}`) as HTMLInputElement).checked;
+      this.layers[layerIndex]!.visible = visible;
+      this.renderCanvas();
+    }
+  }
+
+  private updateLayerScale(layerIndex: number): void {
+    if (this.layers[layerIndex]) {
+      const scale = parseFloat((document.getElementById(`layerScale${layerIndex}`) as HTMLInputElement).value);
+      this.layers[layerIndex]!.scale = scale;
+      document.getElementById(`layerScaleValue${layerIndex}`)!.textContent = `${scale.toFixed(2)}x`;
+      this.renderCanvas();
+    }
+  }
+
+  private updateLayerPosition(layerIndex: number): void {
+    if (this.layers[layerIndex]) {
+      const x = parseInt((document.getElementById(`layerX${layerIndex}`) as HTMLInputElement).value);
+      const y = parseInt((document.getElementById(`layerY${layerIndex}`) as HTMLInputElement).value);
+      
+      this.layers[layerIndex]!.x = x;
+      this.layers[layerIndex]!.y = y;
+      
+      document.getElementById(`layerXValue${layerIndex}`)!.textContent = `${x}px`;
+      document.getElementById(`layerYValue${layerIndex}`)!.textContent = `${y}px`;
+      
+      this.renderCanvas();
+    }
+  }
+
+  private updateControlLabels(layerIndex: number): void {
+    document.getElementById(`layerScaleValue${layerIndex}`)!.textContent = '1.00x';
+    document.getElementById(`layerXValue${layerIndex}`)!.textContent = '0px';
+    document.getElementById(`layerYValue${layerIndex}`)!.textContent = '0px';
+  }
+
+  private handleOutputSizeChange(): void {
+    // Recalculate scales for all existing layers
+    this.layers.forEach((layer, index) => {
+      if (layer) {
+        const newScale = this.calculateInitialScale(layer.image);
+        layer.scale = newScale;
+        this.updateLayerControls(index);
+      }
+    });
+    
+    this.renderCanvas();
+  }
+
+  private renderCanvas(): void {
+    const canvasSize = this.canvas.width;
+    const centerX = canvasSize / 2;
+    const centerY = canvasSize / 2;
+
+    // Clear canvas
+    this.ctx.clearRect(0, 0, canvasSize, canvasSize);
+    
+    // Render layers
+    this.layers.forEach((layer) => {
+      if (layer && layer.visible) {
+        const scaledWidth = layer.image.width * layer.scale;
+        const scaledHeight = layer.image.height * layer.scale;
+        
+        const drawX = centerX + layer.x - scaledWidth / 2;
+        const drawY = centerY + layer.y - scaledHeight / 2;
+        
+        this.ctx.drawImage(layer.image, drawX, drawY, scaledWidth, scaledHeight);
+      }
+    });
+
+    // Render guide
+    if (this.showGuide) {
+      this.ctx.save();
+      this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+      this.ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+      this.ctx.lineWidth = 2;
+      
+      const guideX = centerX - this.guideSize / 2;
+      const guideY = centerY - this.guideSize / 2;
+      
+      this.ctx.fillRect(guideX, guideY, this.guideSize, this.guideSize);
+      this.ctx.strokeRect(guideX, guideY, this.guideSize, this.guideSize);
+      
+      this.ctx.restore();
+    }
+  }
+
+  private updateExportButton(): void {
+    const hasLayers = this.layers.some(layer => layer !== null);
+    const exportBtn = document.getElementById('exportLayers') as HTMLButtonElement;
+    exportBtn.disabled = !hasLayers;
+  }
+
+  private async exportLayers(): Promise<void> {
+    const activeLayers = this.layers.filter(layer => layer !== null) as LayerData[];
+    
+    if (activeLayers.length === 0) {
+      alert('Keine Layer zum Exportieren vorhanden.');
+      return;
+    }
+
+    const outputSize = parseInt((document.getElementById('outputSize') as HTMLSelectElement).value);
+    const prefix = (document.getElementById('layerPrefix') as HTMLInputElement).value || 'layer';
+    const quality = parseInt((document.getElementById('layerQuality') as HTMLInputElement).value);
+
+    const formData = new FormData();
+    const layerOptions: LayerExportOptions = { outputSize, prefix, quality };
+
+    activeLayers.forEach((layer, index) => {
+      formData.append('layers', layer.file);
+    });
+
+    // Add layer transformations
+    const transformations = this.layers.map(layer => 
+      layer ? { visible: layer.visible, scale: layer.scale, x: layer.x, y: layer.y } : null
+    );
+
+    formData.append('transformations', JSON.stringify(transformations));
+    formData.append('options', JSON.stringify(layerOptions));
+
+    try {
+      const response = await fetch('/api/layer-process', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Fehler beim Layer-Export');
+      }
+
+      const data = await response.json();
+      console.log('Layer Export erfolgreich:', data);
+      alert('Layer erfolgreich exportiert!');
+    } catch (error) {
+      console.error('Export-Fehler:', error);
+      alert('Fehler beim Layer-Export');
+    }
+  }
+
+  // Preset Management Methods
+  private loadPresetList(): void {
+    const presetSelect = document.getElementById('presetSelect') as HTMLSelectElement;
+    const savedPresets = this.getSavedPresets();
+    
+    // Clear existing options except the first one
+    presetSelect.innerHTML = '<option value="">-- Preset wählen --</option>';
+    
+    // Add saved presets
+    savedPresets.forEach(preset => {
+      const option = document.createElement('option');
+      option.value = preset.name;
+      option.textContent = preset.name;
+      presetSelect.appendChild(option);
+    });
+  }
+
+  private savePreset(): void {
+    const presetNameInput = document.getElementById('presetName') as HTMLInputElement;
+    const presetName = presetNameInput.value.trim();
+    
+    if (!presetName) {
+      alert('Bitte geben Sie einen Namen für das Preset ein.');
+      return;
+    }
+
+    // Create preset from current layer settings
+    const preset: LayerPreset = {
+      name: presetName,
+      guideSize: this.guideSize,
+      layers: this.layers.map(layer => ({
+        visible: layer?.visible || false,
+        scale: layer?.scale || 1.0,
+        x: layer?.x || 0,
+        y: layer?.y || 0
+      }))
+    };
+
+    // Save to localStorage
+    const savedPresets = this.getSavedPresets();
+    const existingIndex = savedPresets.findIndex(p => p.name === presetName);
+    
+    if (existingIndex >= 0) {
+      if (!confirm(`Preset "${presetName}" existiert bereits. Überschreiben?`)) {
+        return;
+      }
+      savedPresets[existingIndex] = preset;
+    } else {
+      savedPresets.push(preset);
+    }
+
+    localStorage.setItem('layerPresets', JSON.stringify(savedPresets));
+    this.loadPresetList();
+    presetNameInput.value = '';
+    alert(`Preset "${presetName}" wurde gespeichert.`);
+  }
+
+  private loadPreset(): void {
+    const presetSelect = document.getElementById('presetSelect') as HTMLSelectElement;
+    const selectedPresetName = presetSelect.value;
+    
+    if (!selectedPresetName) {
+      alert('Bitte wählen Sie ein Preset aus.');
+      return;
+    }
+
+    const savedPresets = this.getSavedPresets();
+    const preset = savedPresets.find(p => p.name === selectedPresetName);
+    
+    if (!preset) {
+      alert('Preset nicht gefunden.');
+      return;
+    }
+
+    // Apply guide size
+    this.guideSize = preset.guideSize || 200;
+    const guideSizeSlider = document.getElementById('guideSize') as HTMLInputElement;
+    const guideSizeNumberInput = document.getElementById('guideSizeInput') as HTMLInputElement;
+    guideSizeSlider.value = this.guideSize.toString();
+    guideSizeNumberInput.value = this.guideSize.toString();
+
+    // Apply preset to existing layers
+    preset.layers.forEach((presetLayer, index) => {
+      if (this.layers[index]) {
+        // Only apply to existing layers
+        this.layers[index]!.visible = presetLayer.visible;
+        this.layers[index]!.scale = presetLayer.scale;
+        this.layers[index]!.x = presetLayer.x;
+        this.layers[index]!.y = presetLayer.y;
+        
+        // Update UI controls
+        this.updateAllLayerControls(index);
+      }
+    });
+
+    this.renderCanvas();
+    alert(`Preset "${selectedPresetName}" wurde geladen.`);
+  }
+
+  private deletePreset(): void {
+    const presetSelect = document.getElementById('presetSelect') as HTMLSelectElement;
+    const selectedPresetName = presetSelect.value;
+    
+    if (!selectedPresetName) {
+      alert('Bitte wählen Sie ein Preset zum Löschen aus.');
+      return;
+    }
+
+    if (!confirm(`Preset "${selectedPresetName}" wirklich löschen?`)) {
+      return;
+    }
+
+    const savedPresets = this.getSavedPresets();
+    const filteredPresets = savedPresets.filter(p => p.name !== selectedPresetName);
+    
+    localStorage.setItem('layerPresets', JSON.stringify(filteredPresets));
+    this.loadPresetList();
+    alert(`Preset "${selectedPresetName}" wurde gelöscht.`);
+  }
+
+  private getSavedPresets(): LayerPreset[] {
+    const saved = localStorage.getItem('layerPresets');
+    return saved ? JSON.parse(saved) : [];
+  }
+
+  private updateAllLayerControls(layerIndex: number): void {
+    const layer = this.layers[layerIndex];
+    if (!layer) return;
+
+    // Update visibility
+    (document.getElementById(`layerVisible${layerIndex}`) as HTMLInputElement).checked = layer.visible;
+    
+    // Update scale
+    const scaleInput = document.getElementById(`layerScale${layerIndex}`) as HTMLInputElement;
+    const scaleValue = document.getElementById(`layerScaleValue${layerIndex}`)!;
+    scaleInput.value = layer.scale.toString();
+    scaleValue.textContent = `${layer.scale.toFixed(2)}x`;
+
+    // Update position X
+    const xInput = document.getElementById(`layerX${layerIndex}`) as HTMLInputElement;
+    const xValue = document.getElementById(`layerXValue${layerIndex}`)!;
+    xInput.value = layer.x.toString();
+    xValue.textContent = `${layer.x}px`;
+
+    // Update position Y
+    const yInput = document.getElementById(`layerY${layerIndex}`) as HTMLInputElement;
+    const yValue = document.getElementById(`layerYValue${layerIndex}`)!;
+    yInput.value = layer.y.toString();
+    yValue.textContent = `${layer.y}px`;
+  }
+
+  private createDefaultPresets(): void {
+    const savedPresets = this.getSavedPresets();
+    
+    // Create your example preset if it doesn't exist
+    if (!savedPresets.find(p => p.name === 'Beispiel-Setup')) {
+      const examplePreset: LayerPreset = {
+        name: 'Beispiel-Setup',
+        guideSize: 180,  // Kleinere Guide-Größe für dein Setup
+        layers: [
+          { visible: true, scale: 0.6, x: -4, y: 14 },  // Layer 1
+          { visible: true, scale: 0.5, x: 0, y: 13 },   // Layer 2
+          { visible: true, scale: 0.4, x: 0, y: 0 }     // Layer 3
+        ]
+      };
+      
+      savedPresets.push(examplePreset);
+      localStorage.setItem('layerPresets', JSON.stringify(savedPresets));
+      this.loadPresetList();
+    }
+  }
 }
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   new ImageProcessor();
+  new LayerEditor();
 });

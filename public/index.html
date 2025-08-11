@@ -15,7 +15,17 @@
         </header>
 
         <main>
-            <section class="upload-section">
+            <!-- Tab Navigation -->
+            <nav class="tab-navigation">
+                <button class="tab-btn active" data-tab="bulk">📦 Bulk Verarbeitung</button>
+                <button class="tab-btn" data-tab="layer">🎨 Layer Editor</button>
+            </nav>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Tab 1: Bulk Processing -->
+                <div class="tab-panel active" id="bulk-tab">
+                    <section class="upload-section">
                 <div id="dropZone" class="drop-zone">
                     <div class="drop-zone-content">
                         <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -60,8 +70,8 @@
                 <div class="option-group">
                     <label for="quality">Komprimierungsqualität:</label>
                     <div class="slider-container">
-                        <input type="range" id="quality" min="50" max="100" value="85">
-                        <span id="qualityValue">85%</span>
+                        <input type="range" id="quality" min="50" max="100" value="100">
+                        <span id="qualityValue">100%</span>
                     </div>
                     <div class="quality-hints">
                         <span>Klein</span>
@@ -154,7 +164,196 @@
                 <button id="downloadAllBtn" class="download-all-btn">
                     <span>📥 Alle herunterladen</span>
                 </button>
-            </section>
+                    </section>
+                </div>
+
+                <!-- Tab 2: Layer Editor -->
+                <div class="tab-panel" id="layer-tab">
+                    <section class="layer-editor-section">
+                        <h2>Layer Editor</h2>
+                        <p>Lade bis zu 3 Bilder als Layer hoch und richte sie präzise aus.</p>
+                        
+                        <div class="layer-upload-area">
+                            <div class="layer-slots">
+                                <div class="layer-slot" data-layer="0">
+                                    <div class="layer-drop-zone" id="layerDropZone0">
+                                        <span class="layer-number">1</span>
+                                        <p>Layer 1</p>
+                                        <input type="file" class="layer-input" id="layerInput0" accept="image/*" hidden>
+                                    </div>
+                                    <div class="layer-preview" id="layerPreview0" style="display: none;">
+                                        <img class="layer-img" id="layerImg0" alt="Layer 1">
+                                        <button class="layer-remove" id="layerRemove0">×</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="layer-slot" data-layer="1">
+                                    <div class="layer-drop-zone" id="layerDropZone1">
+                                        <span class="layer-number">2</span>
+                                        <p>Layer 2</p>
+                                        <input type="file" class="layer-input" id="layerInput1" accept="image/*" hidden>
+                                    </div>
+                                    <div class="layer-preview" id="layerPreview1" style="display: none;">
+                                        <img class="layer-img" id="layerImg1" alt="Layer 2">
+                                        <button class="layer-remove" id="layerRemove1">×</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="layer-slot" data-layer="2">
+                                    <div class="layer-drop-zone" id="layerDropZone2">
+                                        <span class="layer-number">3</span>
+                                        <p>Layer 3</p>
+                                        <input type="file" class="layer-input" id="layerInput2" accept="image/*" hidden>
+                                    </div>
+                                    <div class="layer-preview" id="layerPreview2" style="display: none;">
+                                        <img class="layer-img" id="layerImg2" alt="Layer 3">
+                                        <button class="layer-remove" id="layerRemove2">×</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2-Column Layout: Preview & Controls -->
+                        <div class="layer-workspace">
+                            <!-- Left Column: Canvas Preview + Presets -->
+                            <div class="left-column">
+                                <div class="canvas-preview-area">
+                                    <h3>Vorschau</h3>
+                                    <div class="canvas-container">
+                                        <canvas id="layerCanvas" width="400" height="400"></canvas>
+                                        <div class="canvas-controls">
+                                            <label>
+                                                <input type="checkbox" id="showGuide" checked> 
+                                                Guide anzeigen
+                                            </label>
+                                            <label>
+                                                Guide-Größe: 
+                                                <input type="range" id="guideSize" min="50" max="300" value="200">
+                                                <input type="number" id="guideSizeInput" min="50" max="300" value="200">
+                                                <span>px</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Presets -->
+                                <div class="layer-presets">
+                                    <h3>Presets</h3>
+                                    <div class="preset-controls">
+                                        <div class="preset-buttons">
+                                            <select id="presetSelect">
+                                                <option value="">-- Preset wählen --</option>
+                                            </select>
+                                            <button id="loadPreset" class="preset-btn">📋 Laden</button>
+                                            <button id="savePreset" class="preset-btn">💾 Speichern</button>
+                                            <button id="deletePreset" class="preset-btn delete">🗑️ Löschen</button>
+                                        </div>
+                                        <div class="preset-input">
+                                            <input type="text" id="presetName" placeholder="Preset-Name eingeben...">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Layer Controls -->
+                            <div class="layer-controls-column">
+                                <!-- Layer Controls -->
+                                <div class="layer-controls">
+                                    <h3>Layer-Einstellungen</h3>
+                                    <div class="layer-control-panels-vertical">
+                                        <div class="layer-control-panel" id="layerControl0">
+                                            <h4>Layer 1</h4>
+                                            <div class="control-group">
+                                                <label>Sichtbarkeit: <input type="checkbox" id="layerVisible0" checked></label>
+                                            </div>
+                                            <div class="control-group">
+                                                <label>Skalierung: <input type="range" id="layerScale0" min="0.1" max="3" step="0.05" value="1"></label>
+                                                <span id="layerScaleValue0">1.0x</span>
+                                            </div>
+                                            <div class="control-group">
+                                                <label>Position X: <input type="range" id="layerX0" min="-200" max="200" value="0"></label>
+                                                <span id="layerXValue0">0px</span>
+                                            </div>
+                                            <div class="control-group">
+                                                <label>Position Y: <input type="range" id="layerY0" min="-200" max="200" value="0"></label>
+                                                <span id="layerYValue0">0px</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="layer-control-panel" id="layerControl1">
+                                            <h4>Layer 2</h4>
+                                            <div class="control-group">
+                                                <label>Sichtbarkeit: <input type="checkbox" id="layerVisible1" checked></label>
+                                            </div>
+                                            <div class="control-group">
+                                                <label>Skalierung: <input type="range" id="layerScale1" min="0.1" max="3" step="0.05" value="1"></label>
+                                                <span id="layerScaleValue1">1.0x</span>
+                                            </div>
+                                            <div class="control-group">
+                                                <label>Position X: <input type="range" id="layerX1" min="-200" max="200" value="0"></label>
+                                                <span id="layerXValue1">0px</span>
+                                            </div>
+                                            <div class="control-group">
+                                                <label>Position Y: <input type="range" id="layerY1" min="-200" max="200" value="0"></label>
+                                                <span id="layerYValue1">0px</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="layer-control-panel" id="layerControl2">
+                                            <h4>Layer 3</h4>
+                                            <div class="control-group">
+                                                <label>Sichtbarkeit: <input type="checkbox" id="layerVisible2" checked></label>
+                                            </div>
+                                            <div class="control-group">
+                                                <label>Skalierung: <input type="range" id="layerScale2" min="0.1" max="3" step="0.05" value="1"></label>
+                                                <span id="layerScaleValue2">1.0x</span>
+                                            </div>
+                                            <div class="control-group">
+                                                <label>Position X: <input type="range" id="layerX2" min="-200" max="200" value="0"></label>
+                                                <span id="layerXValue2">0px</span>
+                                            </div>
+                                            <div class="control-group">
+                                                <label>Position Y: <input type="range" id="layerY2" min="-200" max="200" value="0"></label>
+                                                <span id="layerYValue2">0px</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Export Settings -->
+                        <div class="layer-export-settings">
+                            <h3>Export-Einstellungen</h3>
+                            <div class="export-controls">
+                                <div class="control-group">
+                                    <label for="outputSize">Ausgabegröße:</label>
+                                    <select id="outputSize">
+                                        <option value="128">128x128</option>
+                                        <option value="256">256x256</option>
+                                        <option value="512" selected>512x512</option>
+                                        <option value="1024">1024x1024</option>
+                                    </select>
+                                </div>
+                                <div class="control-group">
+                                    <label for="layerQuality">Komprimierungsqualität:</label>
+                                    <div class="slider-container">
+                                        <input type="range" id="layerQuality" min="50" max="100" value="100">
+                                        <span id="layerQualityValue">100%</span>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <label for="layerPrefix">Dateiname-Präfix:</label>
+                                    <input type="text" id="layerPrefix" placeholder="layer" value="layer">
+                                </div>
+                                <button id="exportLayers" class="export-btn" disabled>
+                                    🚀 Layer exportieren
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
         </main>
 
         <div id="progressOverlay" class="progress-overlay" style="display: none;">

@@ -20,6 +20,13 @@ interface CropOptions {
   minContentRatio: number; // Minimum content vs total image ratio
 }
 
+interface LayerTransformation {
+  visible: boolean;
+  scale: number;
+  x: number;
+  y: number;
+}
+
 export class ImageProcessor {
   async splitImage(buffer: Buffer): Promise<Buffer[]> {
     const image = sharp(buffer);
@@ -204,5 +211,62 @@ export class ImageProcessor {
     
     // Then split into 4 parts
     return await this.splitImage(croppedBuffer);
+  }
+
+  async processLayerImage(buffer: Buffer, transformation: LayerTransformation, outputSize: number): Promise<Buffer> {
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+    
+    if (!metadata.width || !metadata.height) {
+      throw new Error('Bildabmessungen konnten nicht ermittelt werden');
+    }
+
+    // The scale from frontend now represents the final size relative to output size
+    // We need to calculate the actual pixel dimensions
+    
+    // First, calculate what the image would be at "fit-to-output" scale (scale = 1.0 equivalent)
+    const baseScaleToFit = Math.min(outputSize / metadata.width, outputSize / metadata.height);
+    const baseFitWidth = Math.round(metadata.width * baseScaleToFit);
+    const baseFitHeight = Math.round(metadata.height * baseScaleToFit);
+    
+    // Apply the user's scale factor on top of the fit-to-output scale
+    const finalWidth = Math.round(baseFitWidth * transformation.scale);
+    const finalHeight = Math.round(baseFitHeight * transformation.scale);
+    
+    // Create output canvas
+    const outputCanvas = sharp({
+      create: {
+        width: outputSize,
+        height: outputSize,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    });
+
+    // Position the scaled image on the canvas
+    const centerX = Math.round(outputSize / 2);
+    const centerY = Math.round(outputSize / 2);
+    const left = Math.round(centerX + transformation.x - finalWidth / 2);
+    const top = Math.round(centerY + transformation.y - finalHeight / 2);
+
+    // First resize the image to final dimensions
+    const scaledImageBuffer = await image
+      .resize(finalWidth, finalHeight, {
+        fit: 'fill'
+      })
+      .png()
+      .toBuffer();
+
+    // Composite the scaled image onto the canvas
+    const result = await outputCanvas
+      .composite([{
+        input: scaledImageBuffer,
+        left: left,
+        top: top
+      }])
+      .png()
+      .toBuffer();
+
+    return result;
   }
 }

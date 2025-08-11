@@ -52,6 +52,19 @@ interface ProcessOptions {
   cropTolerance?: number;
 }
 
+interface LayerTransformation {
+  visible: boolean;
+  scale: number;
+  x: number;
+  y: number;
+}
+
+interface LayerProcessOptions {
+  outputSize: number;
+  prefix: string;
+  quality: number;
+}
+
 app.post('/api/process', upload.array('images', 20), async (req: Request, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
@@ -91,7 +104,7 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
           
           for (let j = 0; j < parts.length; j++) {
             const filename = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
-            const compressed = await compressor.compressPNG(parts[j], option.quality || 85);
+            const compressed = await compressor.compressPNG(parts[j], option.quality || 100);
             await fileManager.saveFile(compressed, filename);
             processedFiles.push({
               filename,
@@ -119,7 +132,7 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
           }
           
           const filename = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
-          const compressed = await compressor.compressPNG(resized, option.quality || 85);
+          const compressed = await compressor.compressPNG(resized, option.quality || 100);
           await fileManager.saveFile(compressed, filename);
           processedFiles.push({
             filename,
@@ -136,7 +149,7 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
             bufferToCompress = await imageProcessor.cropToContent(file.buffer, cropOptions);
           }
           
-          const compressedOnly = await compressor.compressPNG(bufferToCompress, option.quality || 85);
+          const compressedOnly = await compressor.compressPNG(bufferToCompress, option.quality || 100);
           const filenameComp = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
           await fileManager.saveFile(compressedOnly, filenameComp);
           processedFiles.push({
@@ -161,7 +174,7 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
               option.height || 256
             );
             const filenameSR = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
-            const compressedSR = await compressor.compressPNG(resizedPart, option.quality || 85);
+            const compressedSR = await compressor.compressPNG(resizedPart, option.quality || 100);
             await fileManager.saveFile(compressedSR, filenameSR);
             processedFiles.push({
               filename: filenameSR,
@@ -185,6 +198,54 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
   } catch (error) {
     console.error('Fehler bei der Verarbeitung:', error);
     res.status(500).json({ error: 'Fehler bei der Bildverarbeitung' });
+  }
+});
+
+app.post('/api/layer-process', upload.array('layers', 3), async (req: Request, res: Response) => {
+  try {
+    const files = req.files as Express.Multer.File[];
+    const transformations: (LayerTransformation | null)[] = JSON.parse(req.body.transformations);
+    const options: LayerProcessOptions = JSON.parse(req.body.options);
+    
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'Keine Layer-Bilder hochgeladen' });
+    }
+
+    const results = [];
+    let globalCounter = await fileManager.getNextAvailableNumber(options.prefix);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const transformation = transformations[i];
+      
+      if (!transformation || !transformation.visible) {
+        continue; // Skip invisible layers
+      }
+
+      // Process layer with transformations
+      const processedBuffer = await imageProcessor.processLayerImage(
+        file.buffer,
+        transformation,
+        options.outputSize
+      );
+
+      const filename = await fileManager.getUniqueFilename(options.prefix, globalCounter++);
+      const compressed = await compressor.compressPNG(processedBuffer, options.quality || 100);
+      await fileManager.saveFile(compressed, filename);
+
+      results.push({
+        original: file.originalname,
+        filename,
+        url: `/downloads/${filename}`,
+        size: compressed.length,
+        transformation: transformation
+      });
+    }
+
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error('Fehler bei der Layer-Verarbeitung:', error);
+    res.status(500).json({ error: 'Fehler bei der Layer-Verarbeitung' });
   }
 });
 
