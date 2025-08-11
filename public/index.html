@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bild-Bearbeitungs-Tool</title>
+  <script type="module" crossorigin src="/js/main.js"></script>
+  <link rel="modulepreload" crossorigin href="/js/app.js">
+  <link rel="stylesheet" crossorigin href="/css/main.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖼️ Bild-Bearbeitungs-Tool</h1>
+            <p>Bilder zerlegen, komprimieren und Größe ändern</p>
+        </header>
+
+        <main>
+            <section class="upload-section">
+                <div id="dropZone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p>Bilder hier ablegen oder klicken zum Auswählen</p>
+                        <p class="hint">Bis zu 20 Bilder gleichzeitig (PNG, JPG, GIF, WebP)</p>
+                        <input type="file" id="fileInput" multiple accept="image/*" hidden>
+                    </div>
+                </div>
+
+                <div id="imageList" class="image-list"></div>
+            </section>
+
+            <section class="options-section">
+                <h2>Bearbeitungsoptionen</h2>
+                
+                <div class="option-group">
+                    <label>Modus:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="mode" value="split" checked>
+                            <span>✂️ Zerlegen (4 Teile)</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="mode" value="resize">
+                            <span>📐 Größe ändern</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="mode" value="compress">
+                            <span>🗜️ Nur komprimieren</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="mode" value="split-resize">
+                            <span>✂️📐 Zerlegen + Größe</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <label for="quality">Komprimierungsqualität:</label>
+                    <div class="slider-container">
+                        <input type="range" id="quality" min="50" max="100" value="85">
+                        <span id="qualityValue">85%</span>
+                    </div>
+                    <div class="quality-hints">
+                        <span>Klein</span>
+                        <span>Optimal</span>
+                        <span>Hoch</span>
+                    </div>
+                </div>
+
+                <div id="sizeOptions" class="option-group" style="display: none;">
+                    <label>Zielgröße (Pixel):</label>
+                    <div class="size-inputs">
+                        <input type="number" id="width" placeholder="Breite" value="512" min="16" max="4096">
+                        <span>×</span>
+                        <input type="number" id="height" placeholder="Höhe" value="512" min="16" max="4096">
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <label>Globales Präfix (optional):</label>
+                    <input type="text" id="globalPrefix" placeholder="z.B. icon, tile, asset">
+                    <p class="hint">Wird für alle Bilder verwendet, wenn kein individuelles Präfix gesetzt ist</p>
+                </div>
+
+                <button id="processBtn" class="process-btn" disabled>
+                    <span>🚀 Bilder verarbeiten</span>
+                </button>
+            </section>
+
+            <section id="results" class="results-section" style="display: none;">
+                <h2>Ergebnisse</h2>
+                <div id="resultsList" class="results-list"></div>
+                <button id="downloadAllBtn" class="download-all-btn">
+                    <span>📥 Alle herunterladen</span>
+                </button>
+            </section>
+        </main>
+
+        <div id="progressOverlay" class="progress-overlay" style="display: none;">
+            <div class="progress-modal">
+                <h3>Verarbeite Bilder...</h3>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <p id="progressText">0%</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
