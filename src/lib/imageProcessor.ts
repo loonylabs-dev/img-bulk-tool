@@ -269,4 +269,131 @@ export class ImageProcessor {
 
     return result;
   }
+
+  async composeLayerImage(
+    layers: { buffer: Buffer; transformation: LayerTransformation; filename: string }[],
+    outputSize: number
+  ): Promise<Buffer> {
+    // Create output canvas
+    const outputCanvas = sharp({
+      create: {
+        width: outputSize,
+        height: outputSize,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    });
+
+    const compositeInputs = [];
+
+    // Process each layer
+    for (const layer of layers) {
+      const image = sharp(layer.buffer);
+      const metadata = await image.metadata();
+      
+      if (!metadata.width || !metadata.height) {
+        console.warn(`Skipping layer ${layer.filename}: Could not get dimensions`);
+        continue;
+      }
+
+      // Calculate dimensions - same logic as processLayerImage
+      const baseScaleToFit = Math.min(outputSize / metadata.width, outputSize / metadata.height);
+      const baseFitWidth = Math.round(metadata.width * baseScaleToFit);
+      const baseFitHeight = Math.round(metadata.height * baseScaleToFit);
+      
+      const finalWidth = Math.round(baseFitWidth * layer.transformation.scale);
+      const finalHeight = Math.round(baseFitHeight * layer.transformation.scale);
+      
+      // Position calculation - same logic as processLayerImage
+      const centerX = Math.round(outputSize / 2);
+      const centerY = Math.round(outputSize / 2);
+      const left = Math.round(centerX + layer.transformation.x - finalWidth / 2);
+      const top = Math.round(centerY + layer.transformation.y - finalHeight / 2);
+
+      // Scale the image
+      const scaledImageBuffer = await image
+        .resize(finalWidth, finalHeight, {
+          fit: 'fill'
+        })
+        .png()
+        .toBuffer();
+
+      // Add to composite inputs
+      compositeInputs.push({
+        input: scaledImageBuffer,
+        left: left,
+        top: top
+      });
+    }
+
+    // Compose all layers
+    const result = await outputCanvas
+      .composite(compositeInputs)
+      .png()
+      .toBuffer();
+
+    return result;
+  }
+
+  async processLayerImageCorrected(buffer: Buffer, transformation: LayerTransformation, outputSize: number): Promise<Buffer> {
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+    
+    if (!metadata.width || !metadata.height) {
+      throw new Error('Bildabmessungen konnten nicht ermittelt werden');
+    }
+
+    // The transformation.scale from frontend is already adjusted for preview
+    // We need to reverse-calculate the actual intended scale for the output size
+    
+    const canvasSize = 400; // Canvas preview size from frontend
+    
+    // Calculate the canvas to output ratio (same as frontend)
+    const canvasToOutputRatio = canvasSize / outputSize;
+    
+    // The transformation.scale is relative to this preview scale
+    // To get the final scale for output, we need to reverse the canvas adjustment
+    const finalScaleForOutput = (transformation.scale / canvasToOutputRatio);
+    
+    // Calculate final dimensions
+    const finalWidth = Math.max(1, Math.min(outputSize, Math.round(metadata.width * finalScaleForOutput)));
+    const finalHeight = Math.max(1, Math.min(outputSize, Math.round(metadata.height * finalScaleForOutput)));
+    
+    // Create output canvas
+    const outputCanvas = sharp({
+      create: {
+        width: outputSize,
+        height: outputSize,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    });
+
+    // Position calculation - scale position same way
+    const positionScaleAdjustment = outputSize / canvasSize;
+    const centerX = Math.round(outputSize / 2);
+    const centerY = Math.round(outputSize / 2);
+    const left = Math.max(0, Math.min(outputSize - finalWidth, Math.round(centerX + (transformation.x * positionScaleAdjustment) - finalWidth / 2)));
+    const top = Math.max(0, Math.min(outputSize - finalHeight, Math.round(centerY + (transformation.y * positionScaleAdjustment) - finalHeight / 2)));
+
+    // First resize the image to final dimensions
+    const scaledImageBuffer = await image
+      .resize(finalWidth, finalHeight, {
+        fit: 'fill'
+      })
+      .png()
+      .toBuffer();
+
+    // Composite the scaled image onto the canvas
+    const result = await outputCanvas
+      .composite([{
+        input: scaledImageBuffer,
+        left: left,
+        top: top
+      }])
+      .png()
+      .toBuffer();
+
+    return result;
+  }
 }

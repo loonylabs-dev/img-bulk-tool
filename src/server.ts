@@ -57,6 +57,7 @@ interface LayerTransformation {
   scale: number;
   x: number;
   y: number;
+  name?: string;
 }
 
 interface LayerProcessOptions {
@@ -214,6 +215,7 @@ app.post('/api/layer-process', upload.array('layers', 3), async (req: Request, r
     const results = [];
     let globalCounter = await fileManager.getNextAvailableNumber(options.prefix);
 
+    // Process each layer individually with correct scale interpretation
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const transformation = transformations[i];
@@ -222,14 +224,16 @@ app.post('/api/layer-process', upload.array('layers', 3), async (req: Request, r
         continue; // Skip invisible layers
       }
 
-      // Process layer with transformations
-      const processedBuffer = await imageProcessor.processLayerImage(
+      // Process layer with corrected transformations
+      const processedBuffer = await imageProcessor.processLayerImageCorrected(
         file.buffer,
         transformation,
         options.outputSize
       );
 
-      const filename = await fileManager.getUniqueFilename(options.prefix, globalCounter++);
+      // Use layer name for filename if provided, otherwise use prefix
+      const layerName = transformation.name || `layer${i + 1}`;
+      const filename = await fileManager.getUniqueFilename(layerName, globalCounter++);
       const compressed = await compressor.compressPNG(processedBuffer, options.quality || 100);
       await fileManager.saveFile(compressed, filename);
 

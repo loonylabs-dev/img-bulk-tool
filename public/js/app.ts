@@ -52,6 +52,7 @@ interface LayerPreset {
     scale: number;
     x: number;
     y: number;
+    layerName?: string;
   }[];
 }
 
@@ -514,6 +515,15 @@ class LayerEditor {
       scaleInput.addEventListener('input', () => this.updateLayerScale(i));
       xInput.addEventListener('input', () => this.updateLayerPosition(i));
       yInput.addEventListener('input', () => this.updateLayerPosition(i));
+
+      // Layer name edit mode listeners
+      const editBtn = document.getElementById(`layerEditBtn${i}`)!;
+      const saveBtn = document.getElementById(`layerSaveBtn${i}`)!;
+      const cancelBtn = document.getElementById(`layerCancelBtn${i}`)!;
+
+      editBtn.addEventListener('click', () => this.enterEditMode(i));
+      saveBtn.addEventListener('click', () => this.saveLayerName(i));
+      cancelBtn.addEventListener('click', () => this.cancelEditMode(i));
     }
 
     // Canvas controls
@@ -796,6 +806,66 @@ class LayerEditor {
     exportBtn.disabled = !hasLayers;
   }
 
+  private enterEditMode(layerIndex: number): void {
+    const nameText = document.getElementById(`layerNameText${layerIndex}`)!;
+    const editBtn = document.getElementById(`layerEditBtn${layerIndex}`)!;
+    const editMode = document.getElementById(`layerEditMode${layerIndex}`)!;
+    const nameInput = document.getElementById(`layerName${layerIndex}`) as HTMLInputElement;
+
+    // Hide display mode, show edit mode
+    nameText.style.display = 'none';
+    editBtn.style.display = 'none';
+    editMode.style.display = 'flex';
+
+    // Focus the input
+    nameInput.focus();
+    nameInput.select();
+  }
+
+  private saveLayerName(layerIndex: number): void {
+    const nameText = document.getElementById(`layerNameText${layerIndex}`)!;
+    const nameInput = document.getElementById(`layerName${layerIndex}`) as HTMLInputElement;
+    const newName = nameInput.value.trim();
+
+    if (!newName) {
+      alert('Layer-Name darf nicht leer sein.');
+      return;
+    }
+
+    // Update display text (h4 is now the nameText)
+    nameText.textContent = newName;
+    
+    // Exit edit mode
+    this.exitEditMode(layerIndex);
+  }
+
+  private cancelEditMode(layerIndex: number): void {
+    const nameText = document.getElementById(`layerNameText${layerIndex}`)!;
+    const nameInput = document.getElementById(`layerName${layerIndex}`) as HTMLInputElement;
+
+    // Reset input to current display text
+    nameInput.value = nameText.textContent || '';
+    
+    // Exit edit mode
+    this.exitEditMode(layerIndex);
+  }
+
+  private exitEditMode(layerIndex: number): void {
+    const nameText = document.getElementById(`layerNameText${layerIndex}`)!;
+    const editBtn = document.getElementById(`layerEditBtn${layerIndex}`)!;
+    const editMode = document.getElementById(`layerEditMode${layerIndex}`)!;
+
+    // Show display mode, hide edit mode
+    nameText.style.display = 'block';
+    editBtn.style.display = 'inline-block';
+    editMode.style.display = 'none';
+  }
+
+  private getLayerName(layerIndex: number): string {
+    const nameText = document.getElementById(`layerNameText${layerIndex}`)!;
+    return nameText.textContent || `layer${layerIndex + 1}`;
+  }
+
   private async exportLayers(): Promise<void> {
     const activeLayers = this.layers.filter(layer => layer !== null) as LayerData[];
     
@@ -815,10 +885,20 @@ class LayerEditor {
       formData.append('layers', layer.file);
     });
 
-    // Add layer transformations
-    const transformations = this.layers.map(layer => 
-      layer ? { visible: layer.visible, scale: layer.scale, x: layer.x, y: layer.y } : null
-    );
+    // Add layer transformations with names
+    const transformations = this.layers.map((layer, index) => {
+      if (!layer) return null;
+      
+      const layerName = this.getLayerName(index);
+      
+      return { 
+        visible: layer.visible, 
+        scale: layer.scale, 
+        x: layer.x, 
+        y: layer.y,
+        name: layerName
+      };
+    });
 
     formData.append('transformations', JSON.stringify(transformations));
     formData.append('options', JSON.stringify(layerOptions));
@@ -835,7 +915,9 @@ class LayerEditor {
 
       const data = await response.json();
       console.log('Layer Export erfolgreich:', data);
-      alert('Layer erfolgreich exportiert!');
+      
+      // Display download UI
+      this.displayLayerResults(data.results);
     } catch (error) {
       console.error('Export-Fehler:', error);
       alert('Fehler beim Layer-Export');
@@ -872,12 +954,17 @@ class LayerEditor {
     const preset: LayerPreset = {
       name: presetName,
       guideSize: this.guideSize,
-      layers: this.layers.map(layer => ({
-        visible: layer?.visible || false,
-        scale: layer?.scale || 1.0,
-        x: layer?.x || 0,
-        y: layer?.y || 0
-      }))
+      layers: this.layers.map((layer, index) => {
+        const layerName = this.getLayerName(index);
+        
+        return {
+          visible: layer?.visible || false,
+          scale: layer?.scale || 1.0,
+          x: layer?.x || 0,
+          y: layer?.y || 0,
+          layerName: layerName
+        };
+      })
     };
 
     // Save to localStorage
@@ -925,6 +1012,15 @@ class LayerEditor {
 
     // Apply preset to existing layers
     preset.layers.forEach((presetLayer, index) => {
+      // Apply layer name regardless of whether layer exists
+      const nameText = document.getElementById(`layerNameText${index}`)!;
+      const nameInput = document.getElementById(`layerName${index}`) as HTMLInputElement;
+      
+      if (nameText && nameInput && presetLayer.layerName) {
+        nameText.textContent = presetLayer.layerName;
+        nameInput.value = presetLayer.layerName;
+      }
+      
       if (this.layers[index]) {
         // Only apply to existing layers
         this.layers[index]!.visible = presetLayer.visible;
@@ -1002,15 +1098,74 @@ class LayerEditor {
         name: 'Beispiel-Setup',
         guideSize: 180,  // Kleinere Guide-Größe für dein Setup
         layers: [
-          { visible: true, scale: 0.6, x: -4, y: 14 },  // Layer 1
-          { visible: true, scale: 0.5, x: 0, y: 13 },   // Layer 2
-          { visible: true, scale: 0.4, x: 0, y: 0 }     // Layer 3
+          { visible: true, scale: 0.6, x: -4, y: 14, layerName: 'Background' },  // Layer 1
+          { visible: true, scale: 0.5, x: 0, y: 13, layerName: 'Avatar' },   // Layer 2
+          { visible: true, scale: 0.4, x: 0, y: 0, layerName: 'Frame' }     // Layer 3
         ]
       };
       
       savedPresets.push(examplePreset);
       localStorage.setItem('layerPresets', JSON.stringify(savedPresets));
       this.loadPresetList();
+    }
+  }
+
+  private displayLayerResults(results: any[]): void {
+    const resultsSection = document.getElementById('layerResults')!;
+    const resultsList = document.getElementById('layerResultsList')!;
+    
+    // Clear previous results
+    resultsList.innerHTML = '';
+    
+    // Create result items
+    results.forEach(result => {
+      const resultItem = document.createElement('div');
+      resultItem.className = 'result-item';
+      
+      resultItem.innerHTML = `
+        <h3>${result.original}</h3>
+        <div class="processed-files">
+          <div class="processed-file">
+            <span class="file-name">${result.filename}</span>
+            <span class="file-size">${this.formatFileSize(result.size)}</span>
+            <a href="${result.url}" download="${result.filename}" class="download-btn">Download</a>
+          </div>
+        </div>
+      `;
+      
+      resultsList.appendChild(resultItem);
+    });
+    
+    // Show results section
+    resultsSection.style.display = 'block';
+    
+    // Setup download all button
+    const downloadAllBtn = document.getElementById('downloadAllLayersBtn')!;
+    downloadAllBtn.onclick = () => this.downloadAllLayers(results);
+    
+    // Scroll to results
+    resultsSection.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  private async downloadAllLayers(results: any[]): Promise<void> {
+    for (const result of results) {
+      const a = document.createElement('a');
+      a.href = result.url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Small delay between downloads
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
 }
