@@ -10,6 +10,9 @@ interface ProcessOptions {
   width?: number;
   height?: number;
   prefix: string;
+  smartCrop?: boolean;
+  cropPadding?: number;
+  cropTolerance?: number;
 }
 
 interface ProcessResult {
@@ -77,6 +80,24 @@ class ImageProcessor {
     const qualityValue = document.getElementById('qualityValue')!;
     qualitySlider.addEventListener('input', () => {
       qualityValue.textContent = `${qualitySlider.value}%`;
+    });
+
+    // Smart Crop Checkbox
+    const smartCropCheckbox = document.getElementById('smartCrop') as HTMLInputElement;
+    smartCropCheckbox.addEventListener('change', this.handleSmartCropChange.bind(this));
+
+    // Crop Padding Slider
+    const paddingSlider = document.getElementById('cropPadding') as HTMLInputElement;
+    const paddingValue = document.getElementById('paddingValue')!;
+    paddingSlider.addEventListener('input', () => {
+      paddingValue.textContent = `${paddingSlider.value}px`;
+    });
+
+    // Crop Tolerance Slider
+    const toleranceSlider = document.getElementById('cropTolerance') as HTMLInputElement;
+    const toleranceValue = document.getElementById('toleranceValue')!;
+    toleranceSlider.addEventListener('input', () => {
+      toleranceValue.textContent = toleranceSlider.value;
     });
 
     // Download All Button
@@ -183,6 +204,17 @@ class ImageProcessor {
     }
   }
 
+  private handleSmartCropChange(): void {
+    const smartCropCheckbox = document.getElementById('smartCrop') as HTMLInputElement;
+    const cropOptions = document.getElementById('cropOptions')!;
+    
+    if (smartCropCheckbox.checked) {
+      cropOptions.style.display = 'block';
+    } else {
+      cropOptions.style.display = 'none';
+    }
+  }
+
   private async processImages(): Promise<void> {
     if (this.images.length === 0) return;
 
@@ -191,6 +223,11 @@ class ImageProcessor {
     const width = parseInt((document.getElementById('width') as HTMLInputElement).value) || 512;
     const height = parseInt((document.getElementById('height') as HTMLInputElement).value) || 512;
     const globalPrefix = (document.getElementById('globalPrefix') as HTMLInputElement).value || 'image';
+    
+    // Smart Crop Options
+    const smartCrop = (document.getElementById('smartCrop') as HTMLInputElement).checked;
+    const cropPadding = parseInt((document.getElementById('cropPadding') as HTMLInputElement).value) || 20;
+    const cropTolerance = parseInt((document.getElementById('cropTolerance') as HTMLInputElement).value) || 10;
 
     const formData = new FormData();
     const options: ProcessOptions[] = [];
@@ -202,7 +239,10 @@ class ImageProcessor {
         quality,
         width,
         height,
-        prefix: img.prefix || globalPrefix
+        prefix: img.prefix || globalPrefix,
+        smartCrop,
+        cropPadding,
+        cropTolerance
       });
     });
 

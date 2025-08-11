@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bild-Bearbeitungs-Tool</title>
+  <link rel="modulepreload" crossorigin href="/assets/app-bX8-uOu4.js">
   <script type="module" crossorigin src="/js/main.js"></script>
-  <link rel="modulepreload" crossorigin href="/js/app.js">
   <link rel="stylesheet" crossorigin href="/css/main.css">
 </head>
 <body>
@@ -78,6 +78,29 @@
                         <span>×</span>
                         <input type="number" id="height" placeholder="Höhe" value="512" min="16" max="4096">
                     </div>
+                </div>
+
+                <div class="option-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="smartCrop">
+                        <span>🎯 Intelligentes Zentrieren (Smart Crop)</span>
+                    </label>
+                    <p class="hint">Erkennt automatisch den Bildinhalt und zentriert ihn mit gleichmäßigem Abstand</p>
+                </div>
+
+                <div id="cropOptions" class="option-group" style="display: none;">
+                    <label for="cropPadding">Abstand um Inhalt (Pixel):</label>
+                    <div class="slider-container">
+                        <input type="range" id="cropPadding" min="0" max="100" value="20">
+                        <span id="paddingValue">20px</span>
+                    </div>
+                    
+                    <label for="cropTolerance">Transparenz-Schwelle:</label>
+                    <div class="slider-container">
+                        <input type="range" id="cropTolerance" min="1" max="50" value="10">
+                        <span id="toleranceValue">10</span>
+                    </div>
+                    <p class="hint">Niedrigere Werte = strengere Transparenz-Erkennung</p>
                 </div>
 
                 <div class="option-group">

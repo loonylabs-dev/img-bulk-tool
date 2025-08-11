@@ -43,6 +43,9 @@ interface ProcessOptions {
   width?: number;
   height?: number;
   prefix: string;
+  smartCrop?: boolean;
+  cropPadding?: number;
+  cropTolerance?: number;
 }
 
 app.post('/api/process', upload.array('images', 20), async (req: Request, res: Response) => {
@@ -62,9 +65,22 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
       const option = options[i] || options[0];
       const processedFiles = [];
 
+      // Create crop options if smart crop is enabled
+      const cropOptions = option.smartCrop ? {
+        padding: option.cropPadding || 20,
+        tolerance: option.cropTolerance || 10,
+        minContentRatio: 0.1
+      } : undefined;
+
       switch (option.mode) {
         case 'split':
-          const parts = await imageProcessor.splitImage(file.buffer);
+          let parts: Buffer[];
+          if (option.smartCrop && cropOptions) {
+            parts = await imageProcessor.smartCropAndSplit(file.buffer, cropOptions);
+          } else {
+            parts = await imageProcessor.splitImage(file.buffer);
+          }
+          
           for (let j = 0; j < parts.length; j++) {
             const filename = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
             const compressed = await compressor.compressPNG(parts[j], option.quality || 85);
@@ -78,11 +94,22 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
           break;
 
         case 'resize':
-          const resized = await imageProcessor.resizeImage(
-            file.buffer,
-            option.width || 512,
-            option.height || 512
-          );
+          let resized: Buffer;
+          if (option.smartCrop && cropOptions) {
+            resized = await imageProcessor.smartCropAndResize(
+              file.buffer,
+              option.width || 512,
+              option.height || 512,
+              cropOptions
+            );
+          } else {
+            resized = await imageProcessor.resizeImage(
+              file.buffer,
+              option.width || 512,
+              option.height || 512
+            );
+          }
+          
           const filename = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
           const compressed = await compressor.compressPNG(resized, option.quality || 85);
           await fileManager.saveFile(compressed, filename);
@@ -94,7 +121,14 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
           break;
 
         case 'compress':
-          const compressedOnly = await compressor.compressPNG(file.buffer, option.quality || 85);
+          let bufferToCompress = file.buffer;
+          
+          // Apply smart crop if enabled
+          if (option.smartCrop && cropOptions) {
+            bufferToCompress = await imageProcessor.cropToContent(file.buffer, cropOptions);
+          }
+          
+          const compressedOnly = await compressor.compressPNG(bufferToCompress, option.quality || 85);
           const filenameComp = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
           await fileManager.saveFile(compressedOnly, filenameComp);
           processedFiles.push({
@@ -105,7 +139,13 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
           break;
 
         case 'split-resize':
-          const splitParts = await imageProcessor.splitImage(file.buffer);
+          let splitParts: Buffer[];
+          if (option.smartCrop && cropOptions) {
+            splitParts = await imageProcessor.smartCropAndSplit(file.buffer, cropOptions);
+          } else {
+            splitParts = await imageProcessor.splitImage(file.buffer);
+          }
+          
           for (let j = 0; j < splitParts.length; j++) {
             const resizedPart = await imageProcessor.resizeImage(
               splitParts[j],
