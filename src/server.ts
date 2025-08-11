@@ -45,6 +45,10 @@ interface ProcessOptions {
   prefix: string;
   smartCrop?: boolean;
   cropPadding?: number;
+  cropPaddingTop?: number;
+  cropPaddingRight?: number;
+  cropPaddingBottom?: number;
+  cropPaddingLeft?: number;
   cropTolerance?: number;
 }
 
@@ -68,6 +72,10 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
       // Create crop options if smart crop is enabled
       const cropOptions = option.smartCrop ? {
         padding: option.cropPadding || 20,
+        paddingTop: option.cropPaddingTop,
+        paddingRight: option.cropPaddingRight,
+        paddingBottom: option.cropPaddingBottom,
+        paddingLeft: option.cropPaddingLeft,
         tolerance: option.cropTolerance || 10,
         minContentRatio: 0.1
       } : undefined;

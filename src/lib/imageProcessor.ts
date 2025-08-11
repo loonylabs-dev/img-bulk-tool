@@ -11,7 +11,11 @@ interface ContentBounds {
 }
 
 interface CropOptions {
-  padding: number;
+  padding?: number; // Uniform padding (legacy)
+  paddingTop?: number;
+  paddingRight?: number;
+  paddingBottom?: number;
+  paddingLeft?: number;
   tolerance: number; // Alpha threshold (0-255)
   minContentRatio: number; // Minimum content vs total image ratio
 }
@@ -149,15 +153,23 @@ export class ImageProcessor {
       return buffer;
     }
 
-    // Calculate new dimensions with padding
-    const newWidth = contentBounds.width + (options.padding * 2);
-    const newHeight = contentBounds.height + (options.padding * 2);
-    
-    // Calculate crop position to center the content
-    const cropLeft = Math.max(0, contentBounds.left - options.padding);
-    const cropTop = Math.max(0, contentBounds.top - options.padding);
-    const cropWidth = Math.min(newWidth, originalWidth - cropLeft);
-    const cropHeight = Math.min(newHeight, originalHeight - cropTop);
+    // Get individual padding values (fallback to uniform padding)
+    const paddingTop = options.paddingTop ?? options.padding ?? 20;
+    const paddingRight = options.paddingRight ?? options.padding ?? 20;
+    const paddingBottom = options.paddingBottom ?? options.padding ?? 20;
+    const paddingLeft = options.paddingLeft ?? options.padding ?? 20;
+
+    // Calculate crop position with individual padding
+    const cropLeft = Math.max(0, contentBounds.left - paddingLeft);
+    const cropTop = Math.max(0, contentBounds.top - paddingTop);
+    const cropWidth = Math.min(
+      contentBounds.width + paddingLeft + paddingRight,
+      originalWidth - cropLeft
+    );
+    const cropHeight = Math.min(
+      contentBounds.height + paddingTop + paddingBottom,
+      originalHeight - cropTop
+    );
 
     return await sharp(buffer)
       .extract({

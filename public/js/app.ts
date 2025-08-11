@@ -12,6 +12,10 @@ interface ProcessOptions {
   prefix: string;
   smartCrop?: boolean;
   cropPadding?: number;
+  cropPaddingTop?: number;
+  cropPaddingRight?: number;
+  cropPaddingBottom?: number;
+  cropPaddingLeft?: number;
   cropTolerance?: number;
 }
 
@@ -98,6 +102,11 @@ class ImageProcessor {
     const toleranceValue = document.getElementById('toleranceValue')!;
     toleranceSlider.addEventListener('input', () => {
       toleranceValue.textContent = toleranceSlider.value;
+    });
+
+    // Crop Mode Radio Buttons
+    document.querySelectorAll('input[name="cropMode"]').forEach(radio => {
+      radio.addEventListener('change', this.handleCropModeChange.bind(this));
     });
 
     // Download All Button
@@ -215,6 +224,20 @@ class ImageProcessor {
     }
   }
 
+  private handleCropModeChange(): void {
+    const cropMode = (document.querySelector('input[name="cropMode"]:checked') as HTMLInputElement).value;
+    const uniformSettings = document.getElementById('uniformCropSettings')!;
+    const individualSettings = document.getElementById('individualCropSettings')!;
+    
+    if (cropMode === 'individual') {
+      uniformSettings.style.display = 'none';
+      individualSettings.style.display = 'block';
+    } else {
+      uniformSettings.style.display = 'block';
+      individualSettings.style.display = 'none';
+    }
+  }
+
   private async processImages(): Promise<void> {
     if (this.images.length === 0) return;
 
@@ -226,7 +249,24 @@ class ImageProcessor {
     
     // Smart Crop Options
     const smartCrop = (document.getElementById('smartCrop') as HTMLInputElement).checked;
-    const cropPadding = parseInt((document.getElementById('cropPadding') as HTMLInputElement).value) || 20;
+    const cropMode = (document.querySelector('input[name="cropMode"]:checked') as HTMLInputElement).value;
+    
+    // Get padding values based on mode
+    let cropPadding: number | undefined;
+    let cropPaddingTop: number | undefined;
+    let cropPaddingRight: number | undefined;
+    let cropPaddingBottom: number | undefined;
+    let cropPaddingLeft: number | undefined;
+    
+    if (cropMode === 'individual') {
+      cropPaddingTop = parseInt((document.getElementById('cropPaddingTop') as HTMLInputElement).value) || 20;
+      cropPaddingRight = parseInt((document.getElementById('cropPaddingRight') as HTMLInputElement).value) || 20;
+      cropPaddingBottom = parseInt((document.getElementById('cropPaddingBottom') as HTMLInputElement).value) || 20;
+      cropPaddingLeft = parseInt((document.getElementById('cropPaddingLeft') as HTMLInputElement).value) || 20;
+    } else {
+      cropPadding = parseInt((document.getElementById('cropPadding') as HTMLInputElement).value) || 20;
+    }
+    
     const cropTolerance = parseInt((document.getElementById('cropTolerance') as HTMLInputElement).value) || 10;
 
     const formData = new FormData();
@@ -242,6 +282,10 @@ class ImageProcessor {
         prefix: img.prefix || globalPrefix,
         smartCrop,
         cropPadding,
+        cropPaddingTop,
+        cropPaddingRight,
+        cropPaddingBottom,
+        cropPaddingLeft,
         cropTolerance
       });
     });

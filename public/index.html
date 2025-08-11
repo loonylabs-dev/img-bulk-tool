@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bild-Bearbeitungs-Tool</title>
-  <link rel="modulepreload" crossorigin href="/assets/app-bX8-uOu4.js">
-  <script type="module" crossorigin src="/js/main.js"></script>
+  <script src="/js/app.js"></script>
   <link rel="stylesheet" crossorigin href="/css/main.css">
 </head>
 <body>
@@ -89,10 +88,45 @@
                 </div>
 
                 <div id="cropOptions" class="option-group" style="display: none;">
-                    <label for="cropPadding">Abstand um Inhalt (Pixel):</label>
-                    <div class="slider-container">
-                        <input type="range" id="cropPadding" min="0" max="100" value="20">
-                        <span id="paddingValue">20px</span>
+                    <div class="crop-mode-selection">
+                        <label class="radio-label small">
+                            <input type="radio" name="cropMode" value="uniform" checked>
+                            <span>📐 Gleichmäßiger Abstand</span>
+                        </label>
+                        <label class="radio-label small">
+                            <input type="radio" name="cropMode" value="individual">
+                            <span>🎯 Individuelle Seiten</span>
+                        </label>
+                    </div>
+
+                    <div id="uniformCropSettings">
+                        <label for="cropPadding">Abstand um Inhalt (Pixel):</label>
+                        <div class="slider-container">
+                            <input type="range" id="cropPadding" min="0" max="100" value="20">
+                            <span id="paddingValue">20px</span>
+                        </div>
+                    </div>
+
+                    <div id="individualCropSettings" style="display: none;">
+                        <label>Individuelle Seitenabstände (Pixel):</label>
+                        <div class="padding-grid">
+                            <div class="padding-input-group">
+                                <label for="cropPaddingTop">🔺 Oben:</label>
+                                <input type="number" id="cropPaddingTop" min="0" max="200" value="20" placeholder="20">
+                            </div>
+                            <div class="padding-input-group">
+                                <label for="cropPaddingRight">▶️ Rechts:</label>
+                                <input type="number" id="cropPaddingRight" min="0" max="200" value="20" placeholder="20">
+                            </div>
+                            <div class="padding-input-group">
+                                <label for="cropPaddingBottom">🔻 Unten:</label>
+                                <input type="number" id="cropPaddingBottom" min="0" max="200" value="20" placeholder="20">
+                            </div>
+                            <div class="padding-input-group">
+                                <label for="cropPaddingLeft">◀️ Links:</label>
+                                <input type="number" id="cropPaddingLeft" min="0" max="200" value="20" placeholder="20">
+                            </div>
+                        </div>
                     </div>
                     
                     <label for="cropTolerance">Transparenz-Schwelle:</label>
