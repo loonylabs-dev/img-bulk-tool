@@ -85,26 +85,60 @@ export class ImageProcessor {
   async analyzeImageContent(buffer: Buffer, tolerance: number = 10): Promise<ContentBounds> {
     const image = sharp(buffer);
     const metadata = await image.metadata();
+    console.log('Original image metadata:', metadata);
     
     if (!metadata.width || !metadata.height) {
       throw new Error('Bildabmessungen konnten nicht ermittelt werden');
     }
 
-    // Ensure image has alpha channel
+    // Strategy 1: Try alpha-based detection first if image has alpha
+    if (metadata.hasAlpha) {
+      console.log('Using alpha-based detection');
+      return this.analyzeAlphaContent(image, metadata, tolerance);
+    }
+    
+    // Strategy 2: Try indexed color detection for palette-based PNGs
+    if (metadata.format === 'png' && metadata.channels && metadata.channels <= 2) {
+      console.log('Detected possible indexed color PNG, trying palette analysis');
+      try {
+        return await this.analyzeIndexedContent(image, metadata, tolerance);
+      } catch (e) {
+        console.log('Indexed analysis failed, falling back to color-based');
+      }
+    }
+    
+    // Strategy 3: Color-based detection (white/black/uniform background)
+    console.log('Using color-based detection');
+    return this.analyzeColorContent(image, metadata, tolerance);
+  }
+
+  private async analyzeAlphaContent(image: sharp.Sharp, _metadata: sharp.Metadata, tolerance: number): Promise<ContentBounds> {
     const { data, info } = await image
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
+      
+    console.log('Raw image info after ensureAlpha:', info);
 
     const { width, height, channels } = info;
     let minX = width, maxX = 0, minY = height, maxY = 0;
     let hasContent = false;
+    
+    // Debug: count different alpha levels
+    let fullyTransparent = 0;
+    let partiallyTransparent = 0;
+    let fullyOpaque = 0;
 
     // Analyze pixel by pixel for content
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const pixelIndex = (y * width + x) * channels;
         const alpha = data[pixelIndex + 3]; // Alpha channel
+        
+        // Debug counting
+        if (alpha === 0) fullyTransparent++;
+        else if (alpha === 255) fullyOpaque++;
+        else partiallyTransparent++;
         
         if (alpha > tolerance) { // Pixel is not transparent
           hasContent = true;
@@ -115,6 +149,23 @@ export class ImageProcessor {
         }
       }
     }
+    
+    console.log('Alpha analysis:', {
+      totalPixels: width * height,
+      fullyTransparent,
+      partiallyTransparent,
+      fullyOpaque,
+      tolerance,
+      percentTransparent: Math.round((fullyTransparent / (width * height)) * 100)
+    });
+    
+    // Sample some alpha values for debugging
+    const sampleAlpha = [];
+    for (let i = 0; i < Math.min(20, width * height); i++) {
+      const pixelIndex = i * channels;
+      sampleAlpha.push(data[pixelIndex + 3]);
+    }
+    console.log('Sample alpha values (first 20 pixels):', sampleAlpha);
 
     if (!hasContent) {
       return {
@@ -144,19 +195,161 @@ export class ImageProcessor {
     };
   }
 
+  private async analyzeIndexedContent(image: sharp.Sharp, _metadata: sharp.Metadata, tolerance: number): Promise<ContentBounds> {
+    // For indexed PNGs, convert to RGBA first to get proper alpha values
+    const { data, info } = await image
+      .png({ palette: false }) // Expand palette to full color
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const { width, height, channels } = info;
+    let minX = width, maxX = 0, minY = height, maxY = 0;
+    let hasContent = false;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const pixelIndex = (y * width + x) * channels;
+        const alpha = data[pixelIndex + 3];
+        
+        if (alpha > tolerance) {
+          hasContent = true;
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+
+    if (!hasContent) {
+      return { left: 0, top: 0, width, height, centerX: width/2, centerY: height/2, hasContent: false };
+    }
+
+    const contentWidth = maxX - minX + 1;
+    const contentHeight = maxY - minY + 1;
+    
+    return {
+      left: minX,
+      top: minY,
+      width: contentWidth,
+      height: contentHeight,
+      centerX: minX + contentWidth / 2,
+      centerY: minY + contentHeight / 2,
+      hasContent: true
+    };
+  }
+
+  private async analyzeColorContent(image: sharp.Sharp, metadata: sharp.Metadata, tolerance: number): Promise<ContentBounds> {
+    const { width, height } = metadata;
+    if (!width || !height) {
+      throw new Error('Invalid image dimensions');
+    }
+
+    // Get RGB data
+    const { data, info } = await image
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const { channels } = info;
+    console.log('Color analysis - channels:', channels);
+
+    // Detect background color by sampling corners
+    const cornerSamples = [
+      this.getPixelColor(data, 0, 0, width, channels),                    // top-left
+      this.getPixelColor(data, width-1, 0, width, channels),             // top-right
+      this.getPixelColor(data, 0, height-1, width, channels),            // bottom-left
+      this.getPixelColor(data, width-1, height-1, width, channels)       // bottom-right
+    ];
+
+    console.log('Corner samples:', cornerSamples);
+
+    // Find most common corner color as background
+    const bgColor = this.findBackgroundColor(cornerSamples);
+    console.log('Detected background color:', bgColor);
+
+    let minX = width, maxX = 0, minY = height, maxY = 0;
+    let hasContent = false;
+
+    // Scan for pixels that differ from background by more than tolerance
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const pixelColor = this.getPixelColor(data, x, y, width, channels);
+        const colorDiff = this.getColorDistance(pixelColor, bgColor);
+        
+        if (colorDiff > tolerance) {
+          hasContent = true;
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+
+    if (!hasContent) {
+      return { left: 0, top: 0, width, height, centerX: width/2, centerY: height/2, hasContent: false };
+    }
+
+    const contentWidth = maxX - minX + 1;
+    const contentHeight = maxY - minY + 1;
+    
+    console.log('Color-based content bounds:', { minX, maxX, minY, maxY, contentWidth, contentHeight });
+
+    return {
+      left: minX,
+      top: minY,
+      width: contentWidth,
+      height: contentHeight,
+      centerX: minX + contentWidth / 2,
+      centerY: minY + contentHeight / 2,
+      hasContent: true
+    };
+  }
+
+  private getPixelColor(data: Buffer, x: number, y: number, width: number, channels: number): number[] {
+    const pixelIndex = (y * width + x) * channels;
+    const color = [];
+    for (let c = 0; c < Math.min(channels, 3); c++) {
+      color.push(data[pixelIndex + c]);
+    }
+    // Pad with 0s if less than 3 channels
+    while (color.length < 3) color.push(0);
+    return color;
+  }
+
+  private findBackgroundColor(cornerSamples: number[][]): number[] {
+    // Simple approach: use top-left corner as background
+    // Could be enhanced with more sophisticated detection
+    return cornerSamples[0];
+  }
+
+  private getColorDistance(color1: number[], color2: number[]): number {
+    // Euclidean distance in RGB space
+    const rDiff = color1[0] - color2[0];
+    const gDiff = color1[1] - color2[1];
+    const bDiff = color1[2] - color2[2];
+    return Math.sqrt(rDiff * rDiff + gDiff * gDiff + bDiff * bDiff);
+  }
+
   async cropToContent(buffer: Buffer, options: CropOptions = { padding: 20, tolerance: 10, minContentRatio: 0.1 }): Promise<Buffer> {
+    console.log('cropToContent called with options:', options);
     const contentBounds = await this.analyzeImageContent(buffer, options.tolerance);
+    console.log('Content bounds detected:', contentBounds);
     const metadata = await sharp(buffer).metadata();
     
     if (!metadata.width || !metadata.height || !contentBounds.hasContent) {
+      console.log('No content found or invalid metadata, returning original');
       return buffer; // Return original if no content found
     }
 
     const { width: originalWidth, height: originalHeight } = metadata;
     const contentRatio = (contentBounds.width * contentBounds.height) / (originalWidth * originalHeight);
+    console.log('Content ratio:', contentRatio, 'Min ratio:', options.minContentRatio);
     
     // If content is too small compared to image, don't crop aggressively
     if (contentRatio < options.minContentRatio) {
+      console.log('Content ratio too small, returning original');
       return buffer;
     }
 
@@ -177,6 +370,14 @@ export class ImageProcessor {
       contentBounds.height + paddingTop + paddingBottom,
       originalHeight - cropTop
     );
+
+    console.log('Cropping with dimensions:', {
+      left: cropLeft,
+      top: cropTop,
+      width: cropWidth,
+      height: cropHeight,
+      padding: { top: paddingTop, right: paddingRight, bottom: paddingBottom, left: paddingLeft }
+    });
 
     return await sharp(buffer)
       .extract({

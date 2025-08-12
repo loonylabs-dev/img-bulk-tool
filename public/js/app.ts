@@ -17,6 +17,9 @@ interface ProcessOptions {
   cropPaddingBottom?: number;
   cropPaddingLeft?: number;
   cropTolerance?: number;
+  autoTrim?: boolean;
+  autoTrimPadding?: number;
+  autoTrimTolerance?: number;
 }
 
 interface ProcessResult {
@@ -112,6 +115,24 @@ class ImageProcessor {
     const qualityValue = document.getElementById('qualityValue')!;
     qualitySlider.addEventListener('input', () => {
       qualityValue.textContent = `${qualitySlider.value}%`;
+    });
+
+    // Auto-Trim Checkbox
+    const autoTrimCheckbox = document.getElementById('autoTrim') as HTMLInputElement;
+    autoTrimCheckbox.addEventListener('change', this.handleAutoTrimChange.bind(this));
+
+    // Auto-Trim Padding Slider
+    const autoTrimPaddingSlider = document.getElementById('autoTrimPadding') as HTMLInputElement;
+    const autoTrimPaddingValue = document.getElementById('autoTrimPaddingValue')!;
+    autoTrimPaddingSlider.addEventListener('input', () => {
+      autoTrimPaddingValue.textContent = `${autoTrimPaddingSlider.value}px`;
+    });
+
+    // Auto-Trim Tolerance Slider
+    const autoTrimToleranceSlider = document.getElementById('autoTrimTolerance') as HTMLInputElement;
+    const autoTrimToleranceValue = document.getElementById('autoTrimToleranceValue')!;
+    autoTrimToleranceSlider.addEventListener('input', () => {
+      autoTrimToleranceValue.textContent = autoTrimToleranceSlider.value;
     });
 
     // Smart Crop Checkbox
@@ -241,6 +262,17 @@ class ImageProcessor {
     }
   }
 
+  private handleAutoTrimChange(): void {
+    const autoTrimCheckbox = document.getElementById('autoTrim') as HTMLInputElement;
+    const autoTrimOptions = document.getElementById('autoTrimOptions')!;
+    
+    if (autoTrimCheckbox.checked) {
+      autoTrimOptions.style.display = 'block';
+    } else {
+      autoTrimOptions.style.display = 'none';
+    }
+  }
+
   private handleSmartCropChange(): void {
     const smartCropCheckbox = document.getElementById('smartCrop') as HTMLInputElement;
     const cropOptions = document.getElementById('cropOptions')!;
@@ -275,6 +307,11 @@ class ImageProcessor {
     const height = parseInt((document.getElementById('height') as HTMLInputElement).value) || 512;
     const globalPrefix = (document.getElementById('globalPrefix') as HTMLInputElement).value || 'image';
     
+    // Auto-Trim Options
+    const autoTrim = (document.getElementById('autoTrim') as HTMLInputElement).checked;
+    const autoTrimPadding = parseInt((document.getElementById('autoTrimPadding') as HTMLInputElement).value) || 0;
+    const autoTrimTolerance = parseInt((document.getElementById('autoTrimTolerance') as HTMLInputElement).value) || 100;
+    
     // Smart Crop Options
     const smartCrop = (document.getElementById('smartCrop') as HTMLInputElement).checked;
     const cropMode = (document.querySelector('input[name="cropMode"]:checked') as HTMLInputElement).value;
@@ -308,6 +345,9 @@ class ImageProcessor {
         width,
         height,
         prefix: img.prefix || globalPrefix,
+        autoTrim,
+        autoTrimPadding,
+        autoTrimTolerance,
         smartCrop,
         cropPadding,
         cropPaddingTop,
@@ -385,8 +425,12 @@ class ImageProcessor {
         <div class="processed-files">
           ${result.processed.map(file => `
             <div class="processed-file">
-              <span class="file-name">${file.filename}</span>
-              <span class="file-size">${this.formatFileSize(file.size)}</span>
+              <img src="${file.url}" alt="${file.filename}" class="result-preview" 
+                   onerror="this.style.display='none';" />
+              <div class="file-info">
+                <span class="file-name">${file.filename}</span>
+                <span class="file-size">${this.formatFileSize(file.size)}</span>
+              </div>
               <a href="${file.url}" download="${file.filename}" class="download-btn">
                 📥 Download
               </a>

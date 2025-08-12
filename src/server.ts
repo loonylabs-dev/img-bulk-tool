@@ -50,6 +50,9 @@ interface ProcessOptions {
   cropPaddingBottom?: number;
   cropPaddingLeft?: number;
   cropTolerance?: number;
+  autoTrim?: boolean;
+  autoTrimPadding?: number;
+  autoTrimTolerance?: number;
 }
 
 interface LayerTransformation {
@@ -83,6 +86,23 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
       const option = options[i] || options[0];
       const processedFiles = [];
 
+      // Debug logging
+      console.log('Processing options:', {
+        mode: option.mode,
+        autoTrim: option.autoTrim,
+        autoTrimPadding: option.autoTrimPadding,
+        autoTrimTolerance: option.autoTrimTolerance,
+        smartCrop: option.smartCrop,
+        cropTolerance: option.cropTolerance
+      });
+
+      // Create auto-trim options if enabled
+      const autoTrimOptions = option.autoTrim ? {
+        padding: option.autoTrimPadding || 0,
+        tolerance: option.autoTrimTolerance || 100, // Use dedicated auto-trim tolerance
+        minContentRatio: 0.01 // Lower threshold for auto-trim
+      } : undefined;
+
       // Create crop options if smart crop is enabled
       const cropOptions = option.smartCrop ? {
         padding: option.cropPadding || 20,
@@ -94,13 +114,28 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
         minContentRatio: 0.1
       } : undefined;
 
+      // Apply auto-trim first if enabled
+      let processBuffer = file.buffer;
+      if (option.autoTrim && autoTrimOptions) {
+        console.log('Applying auto-trim with options:', autoTrimOptions);
+        const originalMetadata = await imageProcessor.getImageInfo(file.buffer);
+        processBuffer = await imageProcessor.cropToContent(file.buffer, autoTrimOptions);
+        const newMetadata = await imageProcessor.getImageInfo(processBuffer);
+        console.log('Auto-trim result:', {
+          original: { width: originalMetadata.width, height: originalMetadata.height },
+          trimmed: { width: newMetadata.width, height: newMetadata.height }
+        });
+      } else {
+        console.log('Auto-trim NOT applied. autoTrim:', option.autoTrim, 'autoTrimOptions:', autoTrimOptions);
+      }
+
       switch (option.mode) {
         case 'split':
           let parts: Buffer[];
           if (option.smartCrop && cropOptions) {
-            parts = await imageProcessor.smartCropAndSplit(file.buffer, cropOptions);
+            parts = await imageProcessor.smartCropAndSplit(processBuffer, cropOptions);
           } else {
-            parts = await imageProcessor.splitImage(file.buffer);
+            parts = await imageProcessor.splitImage(processBuffer);
           }
           
           for (let j = 0; j < parts.length; j++) {
@@ -119,14 +154,14 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
           let resized: Buffer;
           if (option.smartCrop && cropOptions) {
             resized = await imageProcessor.smartCropAndResize(
-              file.buffer,
+              processBuffer,
               option.width || 512,
               option.height || 512,
               cropOptions
             );
           } else {
             resized = await imageProcessor.resizeImage(
-              file.buffer,
+              processBuffer,
               option.width || 512,
               option.height || 512
             );
@@ -143,11 +178,11 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
           break;
 
         case 'compress':
-          let bufferToCompress = file.buffer;
+          let bufferToCompress = processBuffer;
           
-          // Apply smart crop if enabled
+          // Apply smart crop if enabled (after auto-trim if that was enabled)
           if (option.smartCrop && cropOptions) {
-            bufferToCompress = await imageProcessor.cropToContent(file.buffer, cropOptions);
+            bufferToCompress = await imageProcessor.cropToContent(processBuffer, cropOptions);
           }
           
           const compressedOnly = await compressor.compressPNG(bufferToCompress, option.quality || 100);
@@ -163,9 +198,9 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
         case 'split-resize':
           let splitParts: Buffer[];
           if (option.smartCrop && cropOptions) {
-            splitParts = await imageProcessor.smartCropAndSplit(file.buffer, cropOptions);
+            splitParts = await imageProcessor.smartCropAndSplit(processBuffer, cropOptions);
           } else {
-            splitParts = await imageProcessor.splitImage(file.buffer);
+            splitParts = await imageProcessor.splitImage(processBuffer);
           }
           
           for (let j = 0; j < splitParts.length; j++) {

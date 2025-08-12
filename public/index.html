@@ -91,6 +91,30 @@
 
                 <div class="option-group">
                     <label class="checkbox-label">
+                        <input type="checkbox" id="autoTrim">
+                        <span>✂️ Auto-Trim (Transparenz entfernen)</span>
+                    </label>
+                    <p class="hint">Entfernt automatisch transparente Ränder und behält nur den sichtbaren Inhalt</p>
+                </div>
+
+                <div id="autoTrimOptions" class="option-group" style="display: none;">
+                    <label for="autoTrimPadding">Minimaler Abstand (Pixel):</label>
+                    <div class="slider-container">
+                        <input type="range" id="autoTrimPadding" min="0" max="50" value="0">
+                        <span id="autoTrimPaddingValue">0px</span>
+                    </div>
+                    <p class="hint">Fügt einen kleinen Abstand um den sichtbaren Inhalt hinzu</p>
+                    
+                    <label for="autoTrimTolerance">Erkennungstoleranz:</label>
+                    <div class="slider-container">
+                        <input type="range" id="autoTrimTolerance" min="5" max="100" value="100">
+                        <span id="autoTrimToleranceValue">100</span>
+                    </div>
+                    <p class="hint">Höhere Werte = weniger empfindlich bei der Content-Erkennung</p>
+                </div>
+
+                <div class="option-group">
+                    <label class="checkbox-label">
                         <input type="checkbox" id="smartCrop">
                         <span>🎯 Intelligentes Zentrieren (Smart Crop)</span>
                     </label>
