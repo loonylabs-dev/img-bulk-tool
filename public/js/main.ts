@@ -1,12 +1,14 @@
 import { TabComponent } from './components/TabComponent.js';
 import { BulkProcessor } from './features/BulkProcessor.js';
 import { LayerEditor } from './features/LayerEditor.js';
+import { ColorMatcher } from './features/ColorMatcher.js';
 import { eventBus } from './utils/EventBus.js';
 
 class Application {
   private tabComponent: TabComponent;
   private bulkProcessor: BulkProcessor;
   private layerEditor: LayerEditor;
+  private colorMatcher: ColorMatcher;
 
   constructor() {
     this.preventDefaultDragBehaviors();
@@ -15,6 +17,7 @@ class Application {
     this.tabComponent = new TabComponent();
     this.bulkProcessor = new BulkProcessor();
     this.layerEditor = new LayerEditor();
+    this.colorMatcher = new ColorMatcher();
     
     this.setupTabs();
     this.setupGlobalEventHandlers();
@@ -48,6 +51,16 @@ class Application {
       onActivate: () => {
         console.log('Layer editor tab activated');
         eventBus.emit('tab-changed', { activeTab: 'layer' });
+      }
+    });
+
+    this.tabComponent.addTab({
+      id: 'color',
+      label: '🎨 Color Matching',
+      panelId: 'color-tab',
+      onActivate: () => {
+        console.log('Color matching tab activated');
+        eventBus.emit('tab-changed', { activeTab: 'color' });
       }
     });
   }
@@ -88,6 +101,7 @@ class Application {
       this.tabComponent.init();
       this.bulkProcessor.init();
       this.layerEditor.init();
+      this.colorMatcher.init();
       
       console.log('Application initialized successfully');
       eventBus.emit('app-initialized');
@@ -102,6 +116,7 @@ class Application {
     this.tabComponent.destroy();
     this.bulkProcessor.destroy();
     this.layerEditor.destroy();
+    this.colorMatcher.destroy();
     
     // Clear event bus
     eventBus.removeAllListeners();

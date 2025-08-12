@@ -108,6 +108,76 @@ export class ApiService {
     }
   }
 
+  public async colorMatchImages(
+    referenceFile: File, 
+    imageFiles: File[], 
+    options: any
+  ): Promise<ProcessResult[]> {
+    const formData = new FormData();
+    
+    formData.append('reference', referenceFile);
+    imageFiles.forEach(file => {
+      formData.append('images', file);
+    });
+    formData.append('options', JSON.stringify(options));
+
+    try {
+      const response = await fetch('/api/color-match', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: ApiResponse<ProcessResult[]> = await response.json();
+      
+      if (!data.success || !data.results) {
+        throw new Error(data.error || 'Color matching failed');
+      }
+
+      return data.results;
+    } catch (error) {
+      console.error('Error in color matching:', error);
+      throw error;
+    }
+  }
+
+  public async generateColorPreview(
+    referenceFile: File, 
+    sourceFile: File, 
+    options: any
+  ): Promise<string> {
+    const formData = new FormData();
+    
+    formData.append('reference', referenceFile);
+    formData.append('source', sourceFile);
+    formData.append('options', JSON.stringify(options));
+
+    try {
+      const response = await fetch('/api/color-preview', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success || !data.preview) {
+        throw new Error(data.error || 'Preview generation failed');
+      }
+
+      return data.preview; // Base64 encoded image
+    } catch (error) {
+      console.error('Error generating color preview:', error);
+      throw error;
+    }
+  }
+
   public async cleanup(): Promise<void> {
     try {
       const response = await fetch('/api/cleanup', {

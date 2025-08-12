@@ -6,6 +6,7 @@ import fs from 'fs-extra';
 import { ImageProcessor } from './lib/imageProcessor';
 import { Compressor } from './lib/compressor';
 import { FileManager } from './lib/fileManager';
+import { ColorAnalyzer } from './lib/colorAnalyzer';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +37,7 @@ app.use('/downloads', express.static(path.join(__dirname, '../output')));
 const imageProcessor = new ImageProcessor();
 const compressor = new Compressor();
 const fileManager = new FileManager(path.join(__dirname, '../output'));
+const colorAnalyzer = new ColorAnalyzer();
 
 interface ProcessOptions {
   mode: 'split' | 'resize' | 'compress' | 'split-resize';
@@ -329,6 +331,163 @@ app.get('/api/download/:filename', (req: Request, res: Response) => {
     res.download(filepath);
   } else {
     res.status(404).json({ error: 'Datei nicht gefunden' });
+  }
+});
+
+app.post('/api/color-match', upload.fields([
+  { name: 'reference', maxCount: 1 },
+  { name: 'images', maxCount: 20 }
+]), async (req: Request, res: Response) => {
+  try {
+    const files = req.files as { reference?: Express.Multer.File[]; images?: Express.Multer.File[] };
+    const options = JSON.parse(req.body.options || '{}');
+    
+    // Extract options with defaults
+    const {
+      intensity = 100,
+      quality = 100,
+      saturationBoost = 100,
+      brightnessBoost = 100,
+      contrastBoost = 100,
+      hueShift = 0,
+      sharpness = 100,
+      noiseReduction = 0,
+      gamma = 1.0
+    } = options;
+
+    if (!files?.reference || files.reference.length === 0) {
+      return res.status(400).json({ error: 'Kein Referenzbild hochgeladen' });
+    }
+
+    if (!files?.images || files.images.length === 0) {
+      return res.status(400).json({ error: 'Keine Bilder zum Anpassen hochgeladen' });
+    }
+
+    const referenceFile = files.reference[0];
+    const imageFiles = files.images;
+    
+    console.log(`Color matching: ${imageFiles.length} images to reference "${referenceFile.originalname}"`);
+    console.log(`Parameters:`, { intensity, quality, saturationBoost, brightnessBoost, contrastBoost, hueShift, sharpness, noiseReduction, gamma });
+
+    const results = [];
+    let globalCounter = await fileManager.getNextAvailableNumber('matched');
+
+    // Process each image
+    for (let i = 0; i < imageFiles.length; i++) {
+      const imageFile = imageFiles[i];
+      
+      try {
+        console.log(`Processing image ${i + 1}/${imageFiles.length}: ${imageFile.originalname}`);
+        
+        // Apply color matching with all parameters
+        const matchedBuffer = await colorAnalyzer.matchColorsToReferenceAdvanced(
+          imageFile.buffer,
+          referenceFile.buffer,
+          {
+            intensity: parseInt(intensity),
+            saturationBoost: parseInt(saturationBoost),
+            brightnessBoost: parseInt(brightnessBoost),
+            contrastBoost: parseInt(contrastBoost),
+            hueShift: parseInt(hueShift),
+            sharpness: parseInt(sharpness),
+            noiseReduction: parseInt(noiseReduction),
+            gamma: parseFloat(gamma)
+          }
+        );
+
+        // Compress the result
+        const compressedBuffer = await compressor.compressPNG(matchedBuffer, parseInt(quality));
+        
+        // Save to file
+        const filename = await fileManager.getUniqueFilename('matched', globalCounter++);
+        await fileManager.saveFile(compressedBuffer, filename);
+        
+        results.push({
+          original: imageFile.originalname,
+          originalSize: imageFile.size,
+          processed: [{
+            filename,
+            url: `/downloads/${filename}`,
+            size: compressedBuffer.length
+          }]
+        });
+        
+        console.log(`Image ${i + 1} processed successfully: ${filename}`);
+      } catch (error) {
+        console.error(`Error processing image ${imageFile.originalname}:`, error);
+        // Continue processing other images even if one fails
+      }
+    }
+
+    console.log(`Color matching complete. Processed ${results.length}/${imageFiles.length} images successfully`);
+    res.json({ success: true, results });
+
+  } catch (error) {
+    console.error('Fehler beim Color Matching:', error);
+    res.status(500).json({ error: 'Fehler beim Color Matching' });
+  }
+});
+
+app.post('/api/color-preview', upload.fields([
+  { name: 'reference', maxCount: 1 },
+  { name: 'source', maxCount: 1 }
+]), async (req: Request, res: Response) => {
+  try {
+    const files = req.files as { reference?: Express.Multer.File[]; source?: Express.Multer.File[] };
+    const options = JSON.parse(req.body.options || '{}');
+    
+    // Extract options with defaults
+    const {
+      intensity = 100,
+      saturationBoost = 100,
+      brightnessBoost = 100,
+      contrastBoost = 100,
+      hueShift = 0,
+      sharpness = 100,
+      noiseReduction = 0,
+      gamma = 1.0
+    } = options;
+
+    if (!files?.reference || files.reference.length === 0) {
+      return res.status(400).json({ error: 'Kein Referenzbild hochgeladen' });
+    }
+
+    if (!files?.source || files.source.length === 0) {
+      return res.status(400).json({ error: 'Kein Quellbild hochgeladen' });
+    }
+
+    const referenceFile = files.reference[0];
+    const sourceFile = files.source[0];
+    
+    console.log(`Generating preview with options:`, { intensity, saturationBoost, brightnessBoost, contrastBoost, hueShift, sharpness, noiseReduction, gamma });
+
+    // Generate preview with all parameters (higher resolution)
+    const previewBuffer = await colorAnalyzer.generatePreviewAdvanced(
+      sourceFile.buffer,
+      referenceFile.buffer,
+      {
+        intensity: parseInt(intensity),
+        saturationBoost: parseInt(saturationBoost),
+        brightnessBoost: parseInt(brightnessBoost),
+        contrastBoost: parseInt(contrastBoost),
+        hueShift: parseInt(hueShift),
+        sharpness: parseInt(sharpness),
+        noiseReduction: parseInt(noiseReduction),
+        gamma: parseFloat(gamma)
+      },
+      800 // Higher preview size for better quality
+    );
+
+    // Return preview as base64 encoded image
+    const base64Preview = previewBuffer.toString('base64');
+    res.json({ 
+      success: true, 
+      preview: `data:image/png;base64,${base64Preview}` 
+    });
+
+  } catch (error) {
+    console.error('Fehler beim Generieren der Vorschau:', error);
+    res.status(500).json({ error: 'Fehler beim Generieren der Vorschau' });
   }
 });
 

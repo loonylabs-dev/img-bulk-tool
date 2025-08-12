@@ -19,6 +19,7 @@
             <nav class="tab-navigation">
                 <button class="tab-btn active" data-tab="bulk">📦 Bulk Verarbeitung</button>
                 <button class="tab-btn" data-tab="layer">🎨 Layer Editor</button>
+                <button class="tab-btn" data-tab="color">🎨 Color Matching</button>
             </nav>
 
             <!-- Tab Content -->
@@ -416,6 +417,178 @@
                             <button id="downloadAllLayersBtn" class="download-all-btn">
                                 <span>📥 Alle herunterladen</span>
                             </button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Tab 3: Color Matching -->
+                <div class="tab-panel" id="color-tab">
+                    <section class="color-matching-section">
+                        <h2>🎨 Color Matching</h2>
+                        <p>Lade ein Referenzbild hoch und passe andere Bilder an dessen Farbcharakteristik an.</p>
+
+                        <div class="color-matching-layout">
+                            <!-- Reference Image Upload -->
+                            <div class="reference-section">
+                                <h3>📸 Referenzbild</h3>
+                                <div id="referenceDropZone" class="drop-zone reference-drop-zone">
+                                    <div class="drop-zone-content">
+                                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                        <p>Referenzbild hier ablegen oder klicken zum Auswählen</p>
+                                        <input type="file" id="referenceFileInput" accept="image/*" style="display: none;">
+                                    </div>
+                                </div>
+                                <div id="referencePreview" class="reference-preview" style="display: none;">
+                                    <img id="referenceImage" alt="Referenzbild">
+                                    <button id="removeReference" class="remove-btn">×</button>
+                                </div>
+                            </div>
+
+                            <!-- Bulk Images Upload -->
+                            <div class="bulk-section">
+                                <h3>🖼️ Bilder für Anpassung</h3>
+                                <div id="colorBulkDropZone" class="drop-zone">
+                                    <div class="drop-zone-content">
+                                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                        <h3>Bilder hier ablegen</h3>
+                                        <p>oder <button id="colorBulkFileBtn" class="file-btn">durchsuchen</button></p>
+                                        <input type="file" id="colorBulkFileInput" accept="image/*" multiple style="display: none;">
+                                    </div>
+                                </div>
+                                <div id="colorImageList" class="image-list"></div>
+                            </div>
+
+                            <!-- Preview and Controls -->
+                            <div class="preview-section" id="colorPreviewSection" style="display: none;">
+                                <h3>👁️ Vorschau</h3>
+                                <div class="preview-comparison-triple">
+                                    <div class="preview-item-triple">
+                                        <h4>Original</h4>
+                                        <canvas id="originalCanvas" width="560" height="560"></canvas>
+                                    </div>
+                                    <div class="preview-item-triple">
+                                        <h4>Referenz</h4>
+                                        <canvas id="referenceCanvas" width="560" height="560"></canvas>
+                                    </div>
+                                    <div class="preview-item-triple">
+                                        <h4>Angepasst</h4>
+                                        <canvas id="adjustedCanvas" width="560" height="560"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="color-controls-grid">
+                                    <!-- Spalte 1: Basis & Farben -->
+                                    <div class="control-section">
+                                        <h4>🎨 Farbanpassung</h4>
+                                        <div class="control-group">
+                                            <label for="colorIntensity">Gesamtintensität:</label>
+                                            <div class="slider-container">
+                                                <input type="range" id="colorIntensity" min="0" max="300" value="100" step="5">
+                                                <span id="colorIntensityValue">100%</span>
+                                            </div>
+                                        </div>
+                                        <div class="control-group">
+                                            <label for="saturationBoost">Sättigung:</label>
+                                            <div class="slider-container">
+                                                <input type="range" id="saturationBoost" min="0" max="300" value="100" step="5">
+                                                <span id="saturationBoostValue">100%</span>
+                                            </div>
+                                        </div>
+                                        <div class="control-group">
+                                            <label for="brightnessBoost">Helligkeit:</label>
+                                            <div class="slider-container">
+                                                <input type="range" id="brightnessBoost" min="30" max="200" value="100" step="5">
+                                                <span id="brightnessBoostValue">100%</span>
+                                            </div>
+                                        </div>
+                                        <div class="control-group">
+                                            <label for="hueShift">Farbton-Verschiebung:</label>
+                                            <div class="slider-container">
+                                                <input type="range" id="hueShift" min="-180" max="180" value="0" step="5">
+                                                <span id="hueShiftValue">0°</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Spalte 2: Bildqualität -->
+                                    <div class="control-section">
+                                        <h4>✨ Bildqualität</h4>
+                                        <div class="control-group">
+                                            <label for="contrastBoost">Kontrast:</label>
+                                            <div class="slider-container">
+                                                <input type="range" id="contrastBoost" min="50" max="200" value="100" step="5">
+                                                <span id="contrastBoostValue">100%</span>
+                                            </div>
+                                        </div>
+                                        <div class="control-group">
+                                            <label for="sharpness">Schärfe:</label>
+                                            <div class="slider-container">
+                                                <input type="range" id="sharpness" min="0" max="300" value="100" step="10">
+                                                <span id="sharpnessValue">100%</span>
+                                            </div>
+                                        </div>
+                                        <div class="control-group">
+                                            <label for="gamma">Gamma-Korrektur:</label>
+                                            <div class="slider-container">
+                                                <input type="range" id="gamma" min="50" max="200" value="100" step="5">
+                                                <span id="gammaValue">1.0</span>
+                                            </div>
+                                        </div>
+                                        <div class="control-group">
+                                            <label for="noiseReduction">Rauschentfernung:</label>
+                                            <div class="slider-container">
+                                                <input type="range" id="noiseReduction" min="0" max="100" value="0" step="5">
+                                                <span id="noiseReductionValue">0%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Spalte 3: Ausgabe & Aktionen -->
+                                    <div class="control-section">
+                                        <h4>📋 Ausgabe & Aktionen</h4>
+                                        <div class="control-group">
+                                            <label for="colorQuality">Ausgabequalität:</label>
+                                            <div class="slider-container">
+                                                <input type="range" id="colorQuality" min="50" max="100" value="100">
+                                                <span id="colorQualityValue">100%</span>
+                                            </div>
+                                        </div>
+                                        <div class="control-group">
+                                            <button id="resetControls" class="reset-btn">🔄 Zurücksetzen</button>
+                                        </div>
+                                        <div class="control-group">
+                                            <div class="hint-box">
+                                                <p><strong>💡 Tipps:</strong></p>
+                                                <p>• Gesamtintensität zuerst anpassen</p>
+                                                <p>• Sättigung für lebendige Farben</p>
+                                                <p>• Kontrast für mehr Dynamik</p>
+                                                <p>• Schärfe vorsichtig dosieren</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button id="processColorBtn" class="process-btn" disabled>
+                                    <span>🎨 Color Matching starten</span>
+                                </button>
+                            </div>
+
+                            <!-- Results -->
+                            <div id="colorResults" class="results-section" style="display: none;">
+                                <h3>Ergebnisse</h3>
+                                <div id="colorResultsList" class="results-list"></div>
+                                <button id="downloadAllColorBtn" class="download-all-btn">
+                                    <span>📥 Alle herunterladen</span>
+                                </button>
+                            </div>
                         </div>
                     </section>
                 </div>
