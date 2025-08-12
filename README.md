@@ -8,6 +8,10 @@ Ein TypeScript-basiertes Tool zum Zerlegen, Komprimieren und Bearbeiten von Bild
 - **Bildzerlegung**: Quadratische Bilder in 4 gleich große Teile zerlegen
 - **Komprimierung**: PNG-Komprimierung (einstellbare Qualität 50-100%, Standard: 100%)
 - **Größenänderung**: Bilder auf beliebige Größe skalieren
+- **Auto-Trim** (NEU!): Automatisches Entfernen transparenter Bereiche
+  - Minimaler Abstand konfigurierbar (0-50px, Standard: 2px)
+  - Erkennungstoleranz einstellbar (5-100, Standard: 100)
+  - **Feste Zielgröße nach Auto-Trim** (NEU!): Getrimte Bilder auf exakte Größe skalieren mit Beibehaltung der Proportionen
 - **Smart Crop**: Intelligente Inhaltserkennung mit konfigurierbarem Padding (uniform oder individuelle Seiten)
 - **Batch-Verarbeitung**: Bis zu 20 Bilder gleichzeitig bearbeiten
 - **Transparenz-Erhaltung**: PNG-Transparenz bleibt bei allen Operationen erhalten
@@ -65,6 +69,9 @@ npm run dev
    - **Zerlegen + Größe**: Kombiniert beide Operationen
 3. Optionen konfigurieren:
    - Qualität einstellen (50-100%, Standard: 100%)
+   - **Auto-Trim** aktivieren für automatisches Entfernen transparenter Bereiche
+     - Optional: "Feste Zielgröße nach Auto-Trim" für exakte Abmessungen (z.B. 512x512)
+     - Funktioniert in allen Modi (Komprimieren, Zerlegen, etc.)
    - Smart Crop aktivieren für intelligente Inhaltserkennung
    - Präfix für Ausgabedateien definieren
 4. "Bilder verarbeiten" klicken
@@ -87,6 +94,33 @@ npm run dev
    - Komprimierungsqualität festlegen
    - Dateiname-Präfix eingeben
 6. "Layer exportieren" klicken
+
+## 🎯 Auto-Trim mit fester Zielgröße Feature
+
+Das neue Auto-Trim Feature löst ein häufiges Problem bei der Bildbearbeitung:
+
+### Problem
+Beim Entfernen transparenter Bereiche (Auto-Trim) entstehen variable Bildgrößen (z.B. 477x500, 823x901), 
+was problematisch ist, wenn einheitliche Abmessungen benötigt werden.
+
+### Lösung
+Die Option "Feste Zielgröße nach Auto-Trim" kombiniert drei Schritte:
+1. **Auto-Trim**: Entfernt transparente Bereiche automatisch
+2. **Proportionale Skalierung**: Passt das getrimte Bild in die Zielgröße ein
+3. **Zentrierung**: Platziert den Inhalt mittig im transparenten Canvas
+
+### Anwendungsbeispiele
+- **Icons**: 512x512 App-Icons mit konsistenten Abmessungen
+- **Sprites**: Einheitliche Sprite-Größen für Game-Development
+- **Thumbnails**: Konsistente Vorschaubilder für Galerien
+- **Asset-Bibliotheken**: Standardisierte Bildgrößen für Design-Systeme
+
+### Workflow
+1. Modus wählen (funktioniert mit allen Modi)
+2. "Auto-Trim" aktivieren
+3. "Feste Zielgröße nach Auto-Trim" aktivieren
+4. Zielgröße eingeben (z.B. 512×512)
+5. Verarbeiten → Ergebnis: Exakte Abmessungen mit zentriertem Inhalt
 
 ## Dateinamen-Schema
 
