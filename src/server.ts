@@ -53,6 +53,9 @@ interface ProcessOptions {
   autoTrim?: boolean;
   autoTrimPadding?: number;
   autoTrimTolerance?: number;
+  autoTrimFixedSize?: boolean;
+  autoTrimTargetWidth?: number;
+  autoTrimTargetHeight?: number;
 }
 
 interface LayerTransformation {
@@ -180,9 +183,23 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
         case 'compress':
           let bufferToCompress = processBuffer;
           
-          // Apply smart crop if enabled (after auto-trim if that was enabled)
-          if (option.smartCrop && cropOptions) {
-            bufferToCompress = await imageProcessor.cropToContent(processBuffer, cropOptions);
+          // Check if auto-trim with fixed size is enabled
+          if (option.autoTrim && option.autoTrimFixedSize && option.autoTrimTargetWidth && option.autoTrimTargetHeight) {
+            console.log('Using autoTrimAndResize with target size:', {
+              width: option.autoTrimTargetWidth,
+              height: option.autoTrimTargetHeight
+            });
+            bufferToCompress = await imageProcessor.autoTrimAndResize(
+              file.buffer, // Use original buffer, not already auto-trimmed one
+              option.autoTrimTargetWidth,
+              option.autoTrimTargetHeight,
+              autoTrimOptions
+            );
+          } else {
+            // Apply smart crop if enabled (after auto-trim if that was enabled)
+            if (option.smartCrop && cropOptions) {
+              bufferToCompress = await imageProcessor.cropToContent(processBuffer, cropOptions);
+            }
           }
           
           const compressedOnly = await compressor.compressPNG(bufferToCompress, option.quality || 100);

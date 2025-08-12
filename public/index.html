@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bild-Bearbeitungs-Tool</title>
-  <script type="module" src="/js/main.js"></script>
+  <script type="module" src="./js/main.ts"></script>
   <link rel="stylesheet" crossorigin href="/css/main.css">
 </head>
 <body>
@@ -111,6 +111,24 @@
                         <span id="autoTrimToleranceValue">100</span>
                     </div>
                     <p class="hint">Höhere Werte = weniger empfindlich bei der Content-Erkennung</p>
+
+                    <div class="option-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="autoTrimFixedSize">
+                            <span>🎯 Feste Zielgröße nach Auto-Trim</span>
+                        </label>
+                        <p class="hint">Skaliert das getrimte Bild auf eine feste Größe unter Beibehaltung der Proportionen</p>
+                    </div>
+
+                    <div id="autoTrimSizeOptions" class="option-group" style="display: none;">
+                        <label>Zielgröße nach Auto-Trim (Pixel):</label>
+                        <div class="size-inputs">
+                            <input type="number" id="autoTrimTargetWidth" placeholder="Breite" value="512" min="16" max="4096">
+                            <span>×</span>
+                            <input type="number" id="autoTrimTargetHeight" placeholder="Höhe" value="512" min="16" max="4096">
+                        </div>
+                        <p class="hint">Das getrimte Bild wird proportional skaliert und zentriert in dieser Größe</p>
+                    </div>
                 </div>
 
                 <div class="option-group">

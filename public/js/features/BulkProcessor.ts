@@ -102,7 +102,8 @@ export class BulkProcessor extends BaseComponent {
     // Checkbox events
     const checkboxes = [
       { id: 'autoTrim', handler: this.handleAutoTrimChange.bind(this) },
-      { id: 'smartCrop', handler: this.handleSmartCropChange.bind(this) }
+      { id: 'smartCrop', handler: this.handleSmartCropChange.bind(this) },
+      { id: 'autoTrimFixedSize', handler: this.handleAutoTrimFixedSizeChange.bind(this) }
     ];
 
     const checkboxListeners = checkboxes
@@ -295,6 +296,13 @@ export class BulkProcessor extends BaseComponent {
     }
   }
 
+  private handleAutoTrimFixedSizeChange(): void {
+    const autoTrimFixedSizeCheckbox = document.getElementById('autoTrimFixedSize') as HTMLInputElement;
+    const autoTrimSizeOptions = document.getElementById('autoTrimSizeOptions')!;
+    
+    autoTrimSizeOptions.style.display = autoTrimFixedSizeCheckbox.checked ? 'block' : 'none';
+  }
+
   private getProcessOptions(): ProcessOptions[] {
     const mode = (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value as ProcessOptions['mode'];
     const quality = parseInt((document.getElementById('quality') as HTMLInputElement)?.value || '100');
@@ -305,6 +313,10 @@ export class BulkProcessor extends BaseComponent {
     const autoTrim = (document.getElementById('autoTrim') as HTMLInputElement)?.checked || false;
     const autoTrimPadding = parseInt((document.getElementById('autoTrimPadding') as HTMLInputElement)?.value || '0');
     const autoTrimTolerance = parseInt((document.getElementById('autoTrimTolerance') as HTMLInputElement)?.value || '100');
+    
+    const autoTrimFixedSize = (document.getElementById('autoTrimFixedSize') as HTMLInputElement)?.checked || false;
+    const autoTrimTargetWidth = parseInt((document.getElementById('autoTrimTargetWidth') as HTMLInputElement)?.value || '512');
+    const autoTrimTargetHeight = parseInt((document.getElementById('autoTrimTargetHeight') as HTMLInputElement)?.value || '512');
     
     const smartCrop = (document.getElementById('smartCrop') as HTMLInputElement)?.checked || false;
     const cropMode = (document.querySelector('input[name="cropMode"]:checked') as HTMLInputElement)?.value || 'uniform';
@@ -335,6 +347,9 @@ export class BulkProcessor extends BaseComponent {
       autoTrim,
       autoTrimPadding,
       autoTrimTolerance,
+      autoTrimFixedSize,
+      autoTrimTargetWidth,
+      autoTrimTargetHeight,
       smartCrop,
       cropPadding,
       cropPaddingTop,

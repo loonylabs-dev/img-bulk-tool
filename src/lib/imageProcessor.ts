@@ -414,6 +414,71 @@ export class ImageProcessor {
     return await this.splitImage(croppedBuffer);
   }
 
+  async autoTrimAndResize(buffer: Buffer, targetWidth: number, targetHeight: number, autoTrimOptions?: CropOptions): Promise<Buffer> {
+    console.log('autoTrimAndResize called with target size:', { targetWidth, targetHeight });
+    
+    // First, apply auto-trim to remove transparent areas
+    const trimmedBuffer = await this.cropToContent(buffer, autoTrimOptions);
+    const trimmedMetadata = await sharp(trimmedBuffer).metadata();
+    
+    console.log('After auto-trim:', { width: trimmedMetadata.width, height: trimmedMetadata.height });
+    
+    if (!trimmedMetadata.width || !trimmedMetadata.height) {
+      throw new Error('Could not get dimensions after auto-trim');
+    }
+
+    // Calculate the scale factor to fit the trimmed content into target size while maintaining aspect ratio
+    const scaleX = targetWidth / trimmedMetadata.width;
+    const scaleY = targetHeight / trimmedMetadata.height;
+    const scale = Math.min(scaleX, scaleY); // Use the smaller scale to ensure it fits
+
+    // Calculate the scaled dimensions
+    const scaledWidth = Math.round(trimmedMetadata.width * scale);
+    const scaledHeight = Math.round(trimmedMetadata.height * scale);
+
+    console.log('Calculated scale and dimensions:', { scale, scaledWidth, scaledHeight });
+
+    // Resize the trimmed image to fit within target dimensions
+    const scaledBuffer = await sharp(trimmedBuffer)
+      .resize(scaledWidth, scaledHeight, {
+        fit: 'fill' // We already calculated exact dimensions, so fill is appropriate
+      })
+      .png()
+      .toBuffer();
+
+    // Create a new image with exact target dimensions and transparent background
+    const targetCanvas = sharp({
+      create: {
+        width: targetWidth,
+        height: targetHeight,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    });
+
+    // Center the scaled image on the target canvas
+    const offsetX = Math.round((targetWidth - scaledWidth) / 2);
+    const offsetY = Math.round((targetHeight - scaledHeight) / 2);
+
+    console.log('Centering with offsets:', { offsetX, offsetY });
+
+    // Composite the scaled image onto the target canvas
+    const result = await targetCanvas
+      .composite([{
+        input: scaledBuffer,
+        left: offsetX,
+        top: offsetY
+      }])
+      .png()
+      .toBuffer();
+
+    // Verify final dimensions
+    const finalMetadata = await sharp(result).metadata();
+    console.log('Final result dimensions:', { width: finalMetadata.width, height: finalMetadata.height });
+
+    return result;
+  }
+
   async processLayerImage(buffer: Buffer, transformation: LayerTransformation, outputSize: number): Promise<Buffer> {
     const image = sharp(buffer);
     const metadata = await image.metadata();

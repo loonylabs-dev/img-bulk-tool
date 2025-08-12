@@ -21,6 +21,9 @@ export interface ProcessOptions {
   autoTrim?: boolean;
   autoTrimPadding?: number;
   autoTrimTolerance?: number;
+  autoTrimFixedSize?: boolean;
+  autoTrimTargetWidth?: number;
+  autoTrimTargetHeight?: number;
 }
 
 export interface ProcessResult {
