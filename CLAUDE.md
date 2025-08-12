@@ -185,3 +185,15 @@ document.addEventListener('DOMContentLoaded', initFunction);
 - **Display**: Show 2 decimal places with `toFixed(2)` for scale values
 - **Number Inputs**: Provide both slider and number input for critical values
 - **Bidirectional Sync**: Keep slider and number input synchronized
+
+### Modular Architecture Refactoring
+🏗️ **Frontend Monolith → Modular Architecture Best Practices**:
+- **Clean Build Required**: Always `rm -rf dist` when switching architectures to prevent cached conflicts
+- **Old JS Files Interference**: Remove old compiled JS files (`app.js`, `main.js`) before build - they interfere with new module loading
+- **DOM Element IDs**: Ensure all components have correct element selectors - TabComponent needs `<main id="main">` not just `<main>`
+- **Global vs Scoped Selectors**: BulkProcessor form elements are global - use `document.getElementById()` not scoped `this.$()`
+- **TypeScript Module Structure**: ES2022 modules with strict mode require proper import/export chains
+- **Vite Cache Issues**: Vite can cache old entry points - clear `node_modules/.cache` if build fails
+- **Module Resolution**: Use relative imports `./components/Component.js` not absolute `/js/components/`
+- **Element Context**: Components extending BaseComponent must match their DOM container scope correctly
+- **Event Listener Binding**: Form elements outside component scope need global selectors, not scoped ones
