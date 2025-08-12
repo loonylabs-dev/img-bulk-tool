@@ -4,10 +4,14 @@
   "description": "Bildbearbeitungs-Tool für Zerlegung, Komprimierung und Größenänderung",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc && vite build",
-    "dev": "concurrently \"tsc -w\" \"nodemon dist/server.js\" \"vite\"",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "tsc",
+    "build:frontend": "tsc -p tsconfig.frontend.json && vite build",
+    "dev": "concurrently \"tsc -w\" \"tsc -p tsconfig.frontend.json -w\" \"nodemon dist/server.js\" \"vite\"",
     "start": "node dist/server.js",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "type-check": "tsc --noEmit && tsc -p tsconfig.frontend.json --noEmit",
+    "lint": "echo 'Linting placeholder - add ESLint if needed'"
   },
   "dependencies": {
     "cors": "^2.8.5",

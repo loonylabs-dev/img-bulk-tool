@@ -103,33 +103,73 @@ Beispiele:
 ## Technische Details
 
 - **Backend**: Node.js + Express + TypeScript
-- **Frontend**: Vanilla TypeScript + Vite
+- **Frontend**: Modulares TypeScript + Vite + ES2022 Module
+- **Architektur**: Event-driven, komponentenbasiert, Service Layer Pattern
 - **Bildverarbeitung**: Sharp (schnell und präzise)
 - **Komprimierung**: imagemin + pngquant + optipng
 - **Upload**: Multer für Dateiverarbeitung
+- **TypeScript**: Strict Mode, vollständige Type-Safety
 
-## Ordnerstruktur
+## 🏗️ Frontend Architektur (Refactored)
+
+Das Frontend wurde von einer monolithischen in eine professionelle, modulare Architektur umgebaut:
+
+### Ordnerstruktur
 
 ```
 img-bulk-tool/
-├── src/                    # Backend TypeScript
-│   ├── server.ts
-│   └── lib/
-│       ├── imageProcessor.ts
-│       ├── compressor.ts
-│       └── fileManager.ts
-├── public/                 # Frontend
-│   ├── index.html
-│   ├── css/style.css
-│   └── js/app.ts
-├── dist/                   # Kompilierte Dateien
-├── uploads/                # Temporäre Uploads
-└── output/                 # Verarbeitete Bilder
+├── src/                           # Backend TypeScript
+│   ├── server.ts                  # Express Server
+│   └── lib/                       # Backend Services
+│       ├── imageProcessor.ts      # Bildverarbeitung Logic
+│       ├── compressor.ts          # PNG Komprimierung
+│       └── fileManager.ts        # File-Handling
+├── public/                        # Frontend (Modulares TypeScript)
+│   ├── index.html                 # Single Page App
+│   ├── css/main.css              # Styling
+│   └── js/                        # Modulare Frontend-Architektur
+│       ├── main.ts               # Application Entry Point
+│       ├── components/           # Wiederverwendbare UI-Komponenten
+│       │   ├── BaseComponent.ts  # Abstract Base für alle Komponenten
+│       │   └── TabComponent.ts   # Tab-System Manager
+│       ├── features/             # Feature-Module
+│       │   ├── BulkProcessor.ts  # Bulk-Verarbeitung Feature
+│       │   └── LayerEditor.ts    # Layer-Editor Feature
+│       ├── services/             # Business Logic Layer
+│       │   ├── ApiService.ts     # REST API Communication
+│       │   └── FileService.ts    # File-Handling Logic
+│       ├── models/               # TypeScript Interfaces & Types
+│       │   └── index.ts          # Alle Datenstrukturen
+│       └── utils/                # Hilfsfunktionen
+│           └── EventBus.ts       # Event-System für lose Kopplung
+├── dist/                         # Kompilierte Dateien
+├── uploads/                      # Temporäre Uploads  
+└── output/                       # Verarbeitete Bilder
 ```
+
+### 🎯 Architektur-Prinzipien
+
+1. **Komponentenbasiert**: Jede UI-Einheit ist eine wiederverwendbare Komponente
+2. **Service Layer**: Business Logic getrennt von UI-Code
+3. **Event-driven**: Lose Kopplung durch Event Bus System
+4. **Single Responsibility**: Jede Klasse hat genau eine Verantwortung
+5. **Dependency Injection**: Services werden injiziert, nicht direkt instantiiert
+6. **Type Safety**: Vollständige TypeScript-Abdeckung mit strict mode
+
+### 🔧 Design Patterns
+
+- **Observer Pattern**: Event Bus für komponentenübergreifende Kommunikation
+- **Factory Pattern**: Service Singletons
+- **Template Method**: BaseComponent mit abstrakte Methoden
+- **Strategy Pattern**: Verschiedene Processing-Modi
+- **Facade Pattern**: Services abstrahieren komplexe API-Calls
 
 ## Scripts
 
-- `npm run dev`: Entwicklungsmodus (Watch + Hot Reload)
-- `npm run build`: Produktion-Build
-- `npm start`: Server starten (benötigt Build)
+- `npm run dev`: Entwicklungsmodus (Backend + Frontend Watch)
+- `npm run build`: Vollständiger Build (Backend + Frontend)
+- `npm run build:backend`: Nur Backend kompilieren
+- `npm run build:frontend`: Nur Frontend kompilieren  
+- `npm run start`: Server starten (benötigt Build)
 - `npm run serve`: Frontend Preview
+- `npm run type-check`: TypeScript Type-Checking ohne Build
