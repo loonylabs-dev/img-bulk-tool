@@ -142,8 +142,24 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
           }
           
           for (let j = 0; j < parts.length; j++) {
+            let partToCompress = parts[j];
+            
+            // Apply auto-trim with fixed size to each part if enabled
+            if (option.autoTrim && option.autoTrimFixedSize && option.autoTrimTargetWidth && option.autoTrimTargetHeight) {
+              console.log(`Applying autoTrimAndResize to part ${j + 1}/4 with target size:`, {
+                width: option.autoTrimTargetWidth,
+                height: option.autoTrimTargetHeight
+              });
+              partToCompress = await imageProcessor.autoTrimAndResize(
+                parts[j], // Use the split part, not original buffer
+                option.autoTrimTargetWidth,
+                option.autoTrimTargetHeight,
+                autoTrimOptions
+              );
+            }
+            
             const filename = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
-            const compressed = await compressor.compressPNG(parts[j], option.quality || 100);
+            const compressed = await compressor.compressPNG(partToCompress, option.quality || 100);
             await fileManager.saveFile(compressed, filename);
             processedFiles.push({
               filename,
