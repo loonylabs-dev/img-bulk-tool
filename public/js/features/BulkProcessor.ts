@@ -66,8 +66,8 @@ export class BulkProcessor extends BaseComponent {
   }
 
   private bindFormEvents(): void {
-    // Mode change handlers
-    const modeRadios = this.$$('input[name="mode"]');
+    // Mode change handlers - use document since these are outside the tab
+    const modeRadios = document.querySelectorAll('input[name="mode"]');
     const modeListeners = Array.from(modeRadios).map(radio => ({
       element: radio,
       event: 'change' as const,
@@ -85,8 +85,8 @@ export class BulkProcessor extends BaseComponent {
 
     const sliderListeners = sliderElements
       .map(({ id, valueId, suffix }) => {
-        const slider = this.$(`#${id}`) as HTMLInputElement;
-        const valueSpan = this.$(`#${valueId}`);
+        const slider = document.getElementById(id) as HTMLInputElement;
+        const valueSpan = document.getElementById(valueId);
         if (!slider || !valueSpan) return null;
 
         return {
@@ -107,13 +107,13 @@ export class BulkProcessor extends BaseComponent {
 
     const checkboxListeners = checkboxes
       .map(({ id, handler }) => {
-        const checkbox = this.$(`#${id}`);
+        const checkbox = document.getElementById(id);
         return checkbox ? { element: checkbox, event: 'change' as const, handler } : null;
       })
       .filter(Boolean) as any[];
 
     // Crop mode radio buttons
-    const cropModeRadios = this.$$('input[name="cropMode"]');
+    const cropModeRadios = document.querySelectorAll('input[name="cropMode"]');
     const cropModeListeners = Array.from(cropModeRadios).map(radio => ({
       element: radio,
       event: 'change' as const,
@@ -257,8 +257,8 @@ export class BulkProcessor extends BaseComponent {
   }
 
   private handleModeChange(): void {
-    const mode = (this.$('input[name="mode"]:checked') as HTMLInputElement)?.value;
-    const sizeOptions = this.$('#sizeOptions')!;
+    const mode = (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value;
+    const sizeOptions = document.getElementById('sizeOptions')!;
     
     if (mode === 'resize' || mode === 'split-resize') {
       sizeOptions.style.display = 'block';
@@ -268,23 +268,23 @@ export class BulkProcessor extends BaseComponent {
   }
 
   private handleAutoTrimChange(): void {
-    const autoTrimCheckbox = this.$('#autoTrim') as HTMLInputElement;
-    const autoTrimOptions = this.$('#autoTrimOptions')!;
+    const autoTrimCheckbox = document.getElementById('autoTrim') as HTMLInputElement;
+    const autoTrimOptions = document.getElementById('autoTrimOptions')!;
     
     autoTrimOptions.style.display = autoTrimCheckbox.checked ? 'block' : 'none';
   }
 
   private handleSmartCropChange(): void {
-    const smartCropCheckbox = this.$('#smartCrop') as HTMLInputElement;
-    const cropOptions = this.$('#cropOptions')!;
+    const smartCropCheckbox = document.getElementById('smartCrop') as HTMLInputElement;
+    const cropOptions = document.getElementById('cropOptions')!;
     
     cropOptions.style.display = smartCropCheckbox.checked ? 'block' : 'none';
   }
 
   private handleCropModeChange(): void {
-    const cropMode = (this.$('input[name="cropMode"]:checked') as HTMLInputElement)?.value;
-    const uniformSettings = this.$('#uniformCropSettings')!;
-    const individualSettings = this.$('#individualCropSettings')!;
+    const cropMode = (document.querySelector('input[name="cropMode"]:checked') as HTMLInputElement)?.value;
+    const uniformSettings = document.getElementById('uniformCropSettings')!;
+    const individualSettings = document.getElementById('individualCropSettings')!;
     
     if (cropMode === 'individual') {
       uniformSettings.style.display = 'none';
@@ -296,18 +296,18 @@ export class BulkProcessor extends BaseComponent {
   }
 
   private getProcessOptions(): ProcessOptions[] {
-    const mode = (this.$('input[name="mode"]:checked') as HTMLInputElement)?.value as ProcessOptions['mode'];
-    const quality = parseInt((this.$('#quality') as HTMLInputElement)?.value || '100');
-    const width = parseInt((this.$('#width') as HTMLInputElement)?.value || '512');
-    const height = parseInt((this.$('#height') as HTMLInputElement)?.value || '512');
-    const globalPrefix = (this.$('#globalPrefix') as HTMLInputElement)?.value || 'image';
+    const mode = (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value as ProcessOptions['mode'];
+    const quality = parseInt((document.getElementById('quality') as HTMLInputElement)?.value || '100');
+    const width = parseInt((document.getElementById('width') as HTMLInputElement)?.value || '512');
+    const height = parseInt((document.getElementById('height') as HTMLInputElement)?.value || '512');
+    const globalPrefix = (document.getElementById('globalPrefix') as HTMLInputElement)?.value || 'image';
     
-    const autoTrim = (this.$('#autoTrim') as HTMLInputElement)?.checked || false;
-    const autoTrimPadding = parseInt((this.$('#autoTrimPadding') as HTMLInputElement)?.value || '0');
-    const autoTrimTolerance = parseInt((this.$('#autoTrimTolerance') as HTMLInputElement)?.value || '100');
+    const autoTrim = (document.getElementById('autoTrim') as HTMLInputElement)?.checked || false;
+    const autoTrimPadding = parseInt((document.getElementById('autoTrimPadding') as HTMLInputElement)?.value || '0');
+    const autoTrimTolerance = parseInt((document.getElementById('autoTrimTolerance') as HTMLInputElement)?.value || '100');
     
-    const smartCrop = (this.$('#smartCrop') as HTMLInputElement)?.checked || false;
-    const cropMode = (this.$('input[name="cropMode"]:checked') as HTMLInputElement)?.value || 'uniform';
+    const smartCrop = (document.getElementById('smartCrop') as HTMLInputElement)?.checked || false;
+    const cropMode = (document.querySelector('input[name="cropMode"]:checked') as HTMLInputElement)?.value || 'uniform';
     
     let cropPadding: number | undefined;
     let cropPaddingTop: number | undefined;
@@ -316,15 +316,15 @@ export class BulkProcessor extends BaseComponent {
     let cropPaddingLeft: number | undefined;
     
     if (cropMode === 'individual') {
-      cropPaddingTop = parseInt((this.$('#cropPaddingTop') as HTMLInputElement)?.value || '20');
-      cropPaddingRight = parseInt((this.$('#cropPaddingRight') as HTMLInputElement)?.value || '20');
-      cropPaddingBottom = parseInt((this.$('#cropPaddingBottom') as HTMLInputElement)?.value || '20');
-      cropPaddingLeft = parseInt((this.$('#cropPaddingLeft') as HTMLInputElement)?.value || '20');
+      cropPaddingTop = parseInt((document.getElementById('cropPaddingTop') as HTMLInputElement)?.value || '20');
+      cropPaddingRight = parseInt((document.getElementById('cropPaddingRight') as HTMLInputElement)?.value || '20');
+      cropPaddingBottom = parseInt((document.getElementById('cropPaddingBottom') as HTMLInputElement)?.value || '20');
+      cropPaddingLeft = parseInt((document.getElementById('cropPaddingLeft') as HTMLInputElement)?.value || '20');
     } else {
-      cropPadding = parseInt((this.$('#cropPadding') as HTMLInputElement)?.value || '20');
+      cropPadding = parseInt((document.getElementById('cropPadding') as HTMLInputElement)?.value || '20');
     }
     
-    const cropTolerance = parseInt((this.$('#cropTolerance') as HTMLInputElement)?.value || '10');
+    const cropTolerance = parseInt((document.getElementById('cropTolerance') as HTMLInputElement)?.value || '10');
 
     return this.images.map(img => ({
       mode,
