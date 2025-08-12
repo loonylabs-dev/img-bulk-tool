@@ -311,7 +311,7 @@ export class BulkProcessor extends BaseComponent {
     const globalPrefix = (document.getElementById('globalPrefix') as HTMLInputElement)?.value || 'image';
     
     const autoTrim = (document.getElementById('autoTrim') as HTMLInputElement)?.checked || false;
-    const autoTrimPadding = parseInt((document.getElementById('autoTrimPadding') as HTMLInputElement)?.value || '0');
+    const autoTrimPadding = parseInt((document.getElementById('autoTrimPadding') as HTMLInputElement)?.value || '2');
     const autoTrimTolerance = parseInt((document.getElementById('autoTrimTolerance') as HTMLInputElement)?.value || '100');
     
     const autoTrimFixedSize = (document.getElementById('autoTrimFixedSize') as HTMLInputElement)?.checked || false;
