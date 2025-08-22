@@ -309,6 +309,9 @@ export class BulkProcessor extends BaseComponent {
     const width = parseInt((document.getElementById('width') as HTMLInputElement)?.value || '512');
     const height = parseInt((document.getElementById('height') as HTMLInputElement)?.value || '512');
     const globalPrefix = (document.getElementById('globalPrefix') as HTMLInputElement)?.value || 'image';
+    const combineWithOriginalName = (document.getElementById('combineWithOriginalName') as HTMLInputElement)?.checked || false;
+    const useSequentialNumbering = (document.getElementById('useSequentialNumbering') as HTMLInputElement)?.checked || false;
+    const useOriginalFileNames = (document.getElementById('useOriginalFileNames') as HTMLInputElement)?.checked || false;
     
     const autoTrim = (document.getElementById('autoTrim') as HTMLInputElement)?.checked || false;
     const autoTrimPadding = parseInt((document.getElementById('autoTrimPadding') as HTMLInputElement)?.value || '2');
@@ -344,6 +347,10 @@ export class BulkProcessor extends BaseComponent {
       width,
       height,
       prefix: img.prefix || globalPrefix,
+      originalName: img.file.name,
+      combineWithOriginalName,
+      useSequentialNumbering,
+      useOriginalFileNames,
       autoTrim,
       autoTrimPadding,
       autoTrimTolerance,

@@ -25,6 +25,12 @@ interface LayerTransformation {
   scale: number;
   x: number;
   y: number;
+  name?: string;
+  cropEnabled?: boolean;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
 }
 
 export class ImageProcessor {
@@ -602,11 +608,49 @@ export class ImageProcessor {
   }
 
   async processLayerImageCorrected(buffer: Buffer, transformation: LayerTransformation, outputSize: number): Promise<Buffer> {
-    const image = sharp(buffer);
-    const metadata = await image.metadata();
+    let processedBuffer = buffer;
+    let actualWidth: number;
+    let actualHeight: number;
     
+    // Get initial metadata
+    const metadata = await sharp(buffer).metadata();
     if (!metadata.width || !metadata.height) {
       throw new Error('Bildabmessungen konnten nicht ermittelt werden');
+    }
+    
+    actualWidth = metadata.width;
+    actualHeight = metadata.height;
+    
+    // Apply cropping if enabled
+    if (transformation.cropEnabled) {
+      const cropX = transformation.cropX ?? 0;
+      const cropY = transformation.cropY ?? 0;
+      const cropWidth = transformation.cropWidth ?? 100;
+      const cropHeight = transformation.cropHeight ?? 100;
+      
+      // Calculate crop area in pixels
+      const cropXPixels = Math.round(cropX * metadata.width / 100);
+      const cropYPixels = Math.round(cropY * metadata.height / 100);
+      const cropWidthPixels = Math.round(cropWidth * metadata.width / 100);
+      const cropHeightPixels = Math.round(cropHeight * metadata.height / 100);
+      
+      // Ensure crop doesn't exceed image bounds
+      const finalCropWidth = Math.min(cropWidthPixels, metadata.width - cropXPixels);
+      const finalCropHeight = Math.min(cropHeightPixels, metadata.height - cropYPixels);
+      
+      // Apply crop
+      processedBuffer = await sharp(buffer)
+        .extract({
+          left: cropXPixels,
+          top: cropYPixels,
+          width: finalCropWidth,
+          height: finalCropHeight
+        })
+        .toBuffer();
+      
+      // Update dimensions after crop
+      actualWidth = finalCropWidth;
+      actualHeight = finalCropHeight;
     }
 
     // The transformation.scale from frontend is already adjusted for preview
@@ -621,9 +665,9 @@ export class ImageProcessor {
     // To get the final scale for output, we need to reverse the canvas adjustment
     const finalScaleForOutput = (transformation.scale / canvasToOutputRatio);
     
-    // Calculate final dimensions
-    const finalWidth = Math.max(1, Math.min(outputSize, Math.round(metadata.width * finalScaleForOutput)));
-    const finalHeight = Math.max(1, Math.min(outputSize, Math.round(metadata.height * finalScaleForOutput)));
+    // Calculate final dimensions using actual (possibly cropped) dimensions
+    const finalWidth = Math.max(1, Math.min(outputSize, Math.round(actualWidth * finalScaleForOutput)));
+    const finalHeight = Math.max(1, Math.min(outputSize, Math.round(actualHeight * finalScaleForOutput)));
     
     // Create output canvas
     const outputCanvas = sharp({
@@ -643,7 +687,7 @@ export class ImageProcessor {
     const top = Math.max(0, Math.min(outputSize - finalHeight, Math.round(centerY + (transformation.y * positionScaleAdjustment) - finalHeight / 2)));
 
     // First resize the image to final dimensions
-    const scaledImageBuffer = await image
+    const scaledImageBuffer = await sharp(processedBuffer)
       .resize(finalWidth, finalHeight, {
         fit: 'fill'
       })

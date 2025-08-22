@@ -9,7 +9,7 @@ import { FileManager } from './lib/fileManager';
 import { ColorAnalyzer } from './lib/colorAnalyzer';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -45,6 +45,10 @@ interface ProcessOptions {
   width?: number;
   height?: number;
   prefix: string;
+  originalName?: string;
+  combineWithOriginalName?: boolean;
+  useSequentialNumbering?: boolean;
+  useOriginalFileNames?: boolean;
   smartCrop?: boolean;
   cropPadding?: number;
   cropPaddingTop?: number;
@@ -66,15 +70,21 @@ interface LayerTransformation {
   x: number;
   y: number;
   name?: string;
+  cropEnabled?: boolean;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
 }
 
 interface LayerProcessOptions {
   outputSize: number;
   prefix: string;
   quality: number;
+  useOriginalNames?: boolean;
 }
 
-app.post('/api/process', upload.array('images', 20), async (req: Request, res: Response) => {
+app.post('/api/process', upload.array('images', 200), async (req: Request, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
     const options: ProcessOptions[] = JSON.parse(req.body.options);
@@ -91,6 +101,17 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
       const option = options[i] || options[0];
       const processedFiles = [];
 
+      // Determine the actual prefix to use
+      let actualPrefix = option.prefix;
+      if (option.useOriginalFileNames && option.originalName) {
+        // Use 1:1 original filename without any prefix
+        actualPrefix = path.parse(option.originalName).name;
+      } else if (option.combineWithOriginalName && option.originalName) {
+        // Remove file extension from original name
+        const nameWithoutExt = path.parse(option.originalName).name;
+        actualPrefix = option.prefix ? `${option.prefix}_${nameWithoutExt}` : nameWithoutExt;
+      }
+
       // Debug logging
       console.log('Processing options:', {
         mode: option.mode,
@@ -98,7 +119,12 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
         autoTrimPadding: option.autoTrimPadding,
         autoTrimTolerance: option.autoTrimTolerance,
         smartCrop: option.smartCrop,
-        cropTolerance: option.cropTolerance
+        cropTolerance: option.cropTolerance,
+        actualPrefix: actualPrefix,
+        useSequentialNumbering: option.useSequentialNumbering,
+        combineWithOriginalName: option.combineWithOriginalName,
+        useOriginalFileNames: option.useOriginalFileNames,
+        originalName: option.originalName
       });
 
       // Create auto-trim options if enabled
@@ -160,7 +186,14 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
               );
             }
             
-            const filename = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
+            // For split mode without numbering, add part indicator (tl, tr, bl, br)
+            const partNames = ['tl', 'tr', 'bl', 'br'];
+            const filename = await fileManager.getUniqueFilename(
+              actualPrefix, 
+              option.useOriginalFileNames || option.useSequentialNumbering === false ? 0 : globalCounter++, 
+              option.useOriginalFileNames ? false : option.useSequentialNumbering !== false,
+              option.useSequentialNumbering === false && !option.useOriginalFileNames ? partNames[j] : undefined
+            );
             const compressed = await compressor.compressPNG(partToCompress, option.quality || 100);
             await fileManager.saveFile(compressed, filename);
             processedFiles.push({
@@ -188,7 +221,11 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
             );
           }
           
-          const filename = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
+          const filename = await fileManager.getUniqueFilename(
+            actualPrefix, 
+            option.useOriginalFileNames || option.useSequentialNumbering === false ? 0 : globalCounter++, 
+            option.useOriginalFileNames ? false : option.useSequentialNumbering !== false
+          );
           const compressed = await compressor.compressPNG(resized, option.quality || 100);
           await fileManager.saveFile(compressed, filename);
           processedFiles.push({
@@ -221,7 +258,11 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
           }
           
           const compressedOnly = await compressor.compressPNG(bufferToCompress, option.quality || 100);
-          const filenameComp = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
+          const filenameComp = await fileManager.getUniqueFilename(
+            actualPrefix, 
+            option.useOriginalFileNames || option.useSequentialNumbering === false ? 0 : globalCounter++, 
+            option.useOriginalFileNames ? false : option.useSequentialNumbering !== false
+          );
           await fileManager.saveFile(compressedOnly, filenameComp);
           processedFiles.push({
             filename: filenameComp,
@@ -244,7 +285,14 @@ app.post('/api/process', upload.array('images', 20), async (req: Request, res: R
               option.width || 256,
               option.height || 256
             );
-            const filenameSR = await fileManager.getUniqueFilename(option.prefix, globalCounter++);
+            // For split-resize mode without numbering, add part indicator (tl, tr, bl, br)
+            const partNames = ['tl', 'tr', 'bl', 'br'];
+            const filenameSR = await fileManager.getUniqueFilename(
+              actualPrefix, 
+              option.useOriginalFileNames || option.useSequentialNumbering === false ? 0 : globalCounter++, 
+              option.useOriginalFileNames ? false : option.useSequentialNumbering !== false,
+              option.useSequentialNumbering === false && !option.useOriginalFileNames ? partNames[j] : undefined
+            );
             const compressedSR = await compressor.compressPNG(resizedPart, option.quality || 100);
             await fileManager.saveFile(compressedSR, filenameSR);
             processedFiles.push({
@@ -303,7 +351,15 @@ app.post('/api/layer-process', upload.array('layers', 3), async (req: Request, r
 
       // Use layer name for filename if provided, otherwise use prefix
       const layerName = transformation.name || `layer${i + 1}`;
-      const filename = await fileManager.getUniqueFilename(layerName, globalCounter++);
+      
+      let filename: string;
+      if (options.useOriginalNames) {
+        // Use original names without numbering (will overwrite existing files)
+        filename = await fileManager.getUniqueFilename(layerName, 1, false);
+      } else {
+        // Use sequential numbering (original behavior)
+        filename = await fileManager.getUniqueFilename(layerName, globalCounter++);
+      }
       const compressed = await compressor.compressPNG(processedBuffer, options.quality || 100);
       await fileManager.saveFile(compressed, filename);
 
@@ -336,7 +392,7 @@ app.get('/api/download/:filename', (req: Request, res: Response) => {
 
 app.post('/api/color-match', upload.fields([
   { name: 'reference', maxCount: 1 },
-  { name: 'images', maxCount: 20 }
+  { name: 'images', maxCount: 200 }
 ]), async (req: Request, res: Response) => {
   try {
     const files = req.files as { reference?: Express.Multer.File[]; images?: Express.Multer.File[] };

@@ -11,6 +11,10 @@ export interface ProcessOptions {
   width?: number;
   height?: number;
   prefix: string;
+  originalName?: string;
+  combineWithOriginalName?: boolean;
+  useSequentialNumbering?: boolean;
+  useOriginalFileNames?: boolean;
   smartCrop?: boolean;
   cropPadding?: number | undefined;
   cropPaddingTop?: number | undefined;
@@ -47,17 +51,26 @@ export interface LayerData {
   x: number;
   y: number;
   name?: string;
+  // Crop properties (as percentages 0-100)
+  cropEnabled?: boolean;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
 }
 
 export interface LayerExportOptions {
   outputSize: number;
   prefix: string;
   quality: number;
+  useOriginalNames?: boolean;
 }
 
 export interface LayerPreset {
   name: string;
   guideSize: number;
+  showSecondGuide?: boolean;
+  secondGuideSize?: number;
   layers: LayerPresetData[];
 }
 
@@ -67,6 +80,12 @@ export interface LayerPresetData {
   x: number;
   y: number;
   layerName?: string;
+  // Crop properties
+  cropEnabled?: boolean;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
 }
 
 export interface LayerTransformation {
@@ -75,6 +94,12 @@ export interface LayerTransformation {
   x: number;
   y: number;
   name?: string;
+  // Crop properties
+  cropEnabled?: boolean;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
 }
 
 // Form validation

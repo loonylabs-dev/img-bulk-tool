@@ -10,6 +10,8 @@ export class LayerEditor extends BaseComponent {
   private ctx!: CanvasRenderingContext2D;
   private showGuide: boolean = true;
   private guideSize: number = 200;
+  private showSecondGuide: boolean = true;
+  private secondGuideSize: number = 250;
   private apiService: ApiService;
   private fileService: FileService;
 
@@ -35,8 +37,42 @@ export class LayerEditor extends BaseComponent {
     this.bindPresetEvents();
     this.setupEventHandlers();
     this.renderCanvas();
+    this.checkAndRestorePresets();
     this.loadPresetList();
     this.createDefaultPresets();
+  }
+  
+  private checkAndRestorePresets(): void {
+    // Check if there are any backup presets that should be restored
+    const backupKeys = Object.keys(localStorage).filter(key => key.startsWith('layerPresets_backup_'));
+    
+    if (backupKeys.length > 0 && !localStorage.getItem('layerPresets')) {
+      // Sort by timestamp (newest first)
+      backupKeys.sort((a, b) => {
+        const timeA = parseInt(a.split('_').pop() ?? '0');
+        const timeB = parseInt(b.split('_').pop() ?? '0');
+        return timeB - timeA;
+      });
+      
+      // Try to restore the most recent backup
+      const mostRecentBackup = backupKeys[0];
+      if (mostRecentBackup) {
+        const backupData = localStorage.getItem(mostRecentBackup);
+        
+        if (backupData) {
+          try {
+            JSON.parse(backupData); // Test if it's valid JSON
+            localStorage.setItem('layerPresets', backupData);
+            console.log('Restored presets from backup');
+            
+            // Clean up old backups (keep only the 3 most recent)
+            backupKeys.slice(3).forEach(key => localStorage.removeItem(key));
+          } catch (e) {
+            console.error('Could not restore backup:', e);
+          }
+        }
+      }
+    }
   }
 
   private bindLayerEvents(): void {
@@ -66,8 +102,21 @@ export class LayerEditor extends BaseComponent {
     const controls = [
       { id: `layerVisible${layerIndex}`, event: 'change', handler: () => this.updateLayerVisibility(layerIndex) },
       { id: `layerScale${layerIndex}`, event: 'input', handler: () => this.updateLayerScale(layerIndex) },
+      { id: `layerScaleInput${layerIndex}`, event: 'input', handler: () => this.updateLayerScaleFromInput(layerIndex) },
       { id: `layerX${layerIndex}`, event: 'input', handler: () => this.updateLayerPosition(layerIndex) },
-      { id: `layerY${layerIndex}`, event: 'input', handler: () => this.updateLayerPosition(layerIndex) }
+      { id: `layerXInput${layerIndex}`, event: 'input', handler: () => this.updateLayerPositionFromInput(layerIndex, 'x') },
+      { id: `layerY${layerIndex}`, event: 'input', handler: () => this.updateLayerPosition(layerIndex) },
+      { id: `layerYInput${layerIndex}`, event: 'input', handler: () => this.updateLayerPositionFromInput(layerIndex, 'y') },
+      // Crop controls
+      { id: `layerCropEnabled${layerIndex}`, event: 'change', handler: () => this.updateLayerCropEnabled(layerIndex) },
+      { id: `layerCropX${layerIndex}`, event: 'input', handler: () => this.updateLayerCrop(layerIndex, 'cropX') },
+      { id: `layerCropXInput${layerIndex}`, event: 'input', handler: () => this.updateLayerCropFromInput(layerIndex, 'cropX') },
+      { id: `layerCropY${layerIndex}`, event: 'input', handler: () => this.updateLayerCrop(layerIndex, 'cropY') },
+      { id: `layerCropYInput${layerIndex}`, event: 'input', handler: () => this.updateLayerCropFromInput(layerIndex, 'cropY') },
+      { id: `layerCropWidth${layerIndex}`, event: 'input', handler: () => this.updateLayerCrop(layerIndex, 'cropWidth') },
+      { id: `layerCropWidthInput${layerIndex}`, event: 'input', handler: () => this.updateLayerCropFromInput(layerIndex, 'cropWidth') },
+      { id: `layerCropHeight${layerIndex}`, event: 'input', handler: () => this.updateLayerCrop(layerIndex, 'cropHeight') },
+      { id: `layerCropHeightInput${layerIndex}`, event: 'input', handler: () => this.updateLayerCropFromInput(layerIndex, 'cropHeight') }
     ];
 
     const controlListeners = controls.map(({ id, event, handler }) => {
@@ -96,6 +145,9 @@ export class LayerEditor extends BaseComponent {
     const showGuideInput = this.$('#showGuide') as HTMLInputElement;
     const guideSizeSlider = this.$('#guideSize') as HTMLInputElement;
     const guideSizeNumberInput = this.$('#guideSizeInput') as HTMLInputElement;
+    const showSecondGuideInput = this.$('#showSecondGuide') as HTMLInputElement;
+    const secondGuideSizeSlider = this.$('#secondGuideSize') as HTMLInputElement;
+    const secondGuideSizeNumberInput = this.$('#secondGuideSizeInput') as HTMLInputElement;
 
     const canvasListeners = [
       {
@@ -123,6 +175,35 @@ export class LayerEditor extends BaseComponent {
           if (value >= 50 && value <= 300) {
             this.guideSize = value;
             guideSizeSlider.value = value.toString();
+            this.renderCanvas();
+          }
+        }
+      },
+      {
+        element: showSecondGuideInput,
+        event: 'change' as const,
+        handler: () => {
+          this.showSecondGuide = showSecondGuideInput.checked;
+          this.renderCanvas();
+        }
+      },
+      {
+        element: secondGuideSizeSlider,
+        event: 'input' as const,
+        handler: () => {
+          this.secondGuideSize = parseInt(secondGuideSizeSlider.value);
+          secondGuideSizeNumberInput.value = this.secondGuideSize.toString();
+          this.renderCanvas();
+        }
+      },
+      {
+        element: secondGuideSizeNumberInput,
+        event: 'input' as const,
+        handler: () => {
+          const value = parseInt(secondGuideSizeNumberInput.value);
+          if (value >= 50 && value <= 400) {
+            this.secondGuideSize = value;
+            secondGuideSizeSlider.value = value.toString();
             this.renderCanvas();
           }
         }
@@ -231,7 +312,12 @@ export class LayerEditor extends BaseComponent {
         visible: true,
         scale: initialScale,
         x: 0,
-        y: 0
+        y: 0,
+        cropEnabled: false,
+        cropX: 0,
+        cropY: 0,
+        cropWidth: 100,
+        cropHeight: 100
       };
 
       const preview = await this.fileService.loadImagePreview(file);
@@ -260,14 +346,16 @@ export class LayerEditor extends BaseComponent {
     const layer = this.layers[layerIndex];
     if (!layer) return;
 
-    const scaleInput = this.$(`#layerScale${layerIndex}`) as HTMLInputElement;
-    const scaleValue = this.$(`#layerScaleValue${layerIndex}`)!;
+    const scaleSlider = this.$(`#layerScale${layerIndex}`) as HTMLInputElement;
+    const scaleInput = this.$(`#layerScaleInput${layerIndex}`) as HTMLInputElement;
     
-    scaleInput.value = layer.scale.toString();
-    scaleValue.textContent = `${layer.scale.toFixed(2)}x`;
+    scaleSlider.value = layer.scale.toString();
+    if (scaleInput) scaleInput.value = layer.scale.toFixed(2);
 
-    this.$(`#layerXValue${layerIndex}`)!.textContent = '0px';
-    this.$(`#layerYValue${layerIndex}`)!.textContent = '0px';
+    const xInput = this.$(`#layerXInput${layerIndex}`) as HTMLInputElement;
+    const yInput = this.$(`#layerYInput${layerIndex}`) as HTMLInputElement;
+    if (xInput) xInput.value = '0';
+    if (yInput) yInput.value = '0';
   }
 
   private updateLayerPreview(layerIndex: number, src: string): void {
@@ -297,6 +385,21 @@ export class LayerEditor extends BaseComponent {
     (this.$(`#layerX${layerIndex}`) as HTMLInputElement).value = '0';
     (this.$(`#layerY${layerIndex}`) as HTMLInputElement).value = '0';
     
+    const scaleInput = this.$(`#layerScaleInput${layerIndex}`) as HTMLInputElement;
+    const xInput = this.$(`#layerXInput${layerIndex}`) as HTMLInputElement;
+    const yInput = this.$(`#layerYInput${layerIndex}`) as HTMLInputElement;
+    if (scaleInput) scaleInput.value = '1.00';
+    if (xInput) xInput.value = '0';
+    if (yInput) yInput.value = '0';
+    
+    // Reset crop controls
+    (this.$(`#layerCropEnabled${layerIndex}`) as HTMLInputElement).checked = false;
+    (this.$(`#layerCropX${layerIndex}`) as HTMLInputElement).value = '0';
+    (this.$(`#layerCropY${layerIndex}`) as HTMLInputElement).value = '0';
+    (this.$(`#layerCropWidth${layerIndex}`) as HTMLInputElement).value = '100';
+    (this.$(`#layerCropHeight${layerIndex}`) as HTMLInputElement).value = '100';
+    this.disableCropControls(layerIndex);
+    
     this.updateControlLabels(layerIndex);
     this.updateExportButton();
     this.renderCanvas();
@@ -314,8 +417,24 @@ export class LayerEditor extends BaseComponent {
     if (this.layers[layerIndex]) {
       const scale = parseFloat((this.$(`#layerScale${layerIndex}`) as HTMLInputElement).value);
       this.layers[layerIndex]!.scale = scale;
-      this.$(`#layerScaleValue${layerIndex}`)!.textContent = `${scale.toFixed(2)}x`;
+      const scaleInput = this.$(`#layerScaleInput${layerIndex}`) as HTMLInputElement;
+      if (scaleInput) {
+        scaleInput.value = scale.toFixed(2);
+      }
       this.renderCanvas();
+    }
+  }
+
+  private updateLayerScaleFromInput(layerIndex: number): void {
+    if (this.layers[layerIndex]) {
+      const scaleInput = this.$(`#layerScaleInput${layerIndex}`) as HTMLInputElement;
+      const scale = parseFloat(scaleInput.value);
+      if (!isNaN(scale) && scale >= 0.1 && scale <= 3) {
+        this.layers[layerIndex]!.scale = scale;
+        const slider = this.$(`#layerScale${layerIndex}`) as HTMLInputElement;
+        slider.value = scale.toString();
+        this.renderCanvas();
+      }
     }
   }
 
@@ -327,17 +446,153 @@ export class LayerEditor extends BaseComponent {
       this.layers[layerIndex]!.x = x;
       this.layers[layerIndex]!.y = y;
       
-      this.$(`#layerXValue${layerIndex}`)!.textContent = `${x}px`;
-      this.$(`#layerYValue${layerIndex}`)!.textContent = `${y}px`;
+      const xInput = this.$(`#layerXInput${layerIndex}`) as HTMLInputElement;
+      const yInput = this.$(`#layerYInput${layerIndex}`) as HTMLInputElement;
+      if (xInput) xInput.value = x.toString();
+      if (yInput) yInput.value = y.toString();
       
       this.renderCanvas();
     }
   }
 
+  private updateLayerPositionFromInput(layerIndex: number, axis: 'x' | 'y'): void {
+    if (this.layers[layerIndex]) {
+      const inputId = axis === 'x' ? `layerXInput${layerIndex}` : `layerYInput${layerIndex}`;
+      const sliderId = axis === 'x' ? `layerX${layerIndex}` : `layerY${layerIndex}`;
+      
+      const input = this.$(`#${inputId}`) as HTMLInputElement;
+      const value = parseInt(input.value);
+      
+      if (!isNaN(value) && value >= -200 && value <= 200) {
+        if (axis === 'x') {
+          this.layers[layerIndex]!.x = value;
+        } else {
+          this.layers[layerIndex]!.y = value;
+        }
+        
+        const slider = this.$(`#${sliderId}`) as HTMLInputElement;
+        slider.value = value.toString();
+        
+        this.renderCanvas();
+      }
+    }
+  }
+
   private updateControlLabels(layerIndex: number): void {
-    this.$(`#layerScaleValue${layerIndex}`)!.textContent = '1.00x';
-    this.$(`#layerXValue${layerIndex}`)!.textContent = '0px';
-    this.$(`#layerYValue${layerIndex}`)!.textContent = '0px';
+    const scaleInput = this.$(`#layerScaleInput${layerIndex}`) as HTMLInputElement;
+    const xInput = this.$(`#layerXInput${layerIndex}`) as HTMLInputElement;
+    const yInput = this.$(`#layerYInput${layerIndex}`) as HTMLInputElement;
+    if (scaleInput) scaleInput.value = '1.00';
+    if (xInput) xInput.value = '0';
+    if (yInput) yInput.value = '0';
+    
+    // Update crop inputs
+    const cropXInput = this.$(`#layerCropXInput${layerIndex}`) as HTMLInputElement;
+    const cropYInput = this.$(`#layerCropYInput${layerIndex}`) as HTMLInputElement;
+    const cropWidthInput = this.$(`#layerCropWidthInput${layerIndex}`) as HTMLInputElement;
+    const cropHeightInput = this.$(`#layerCropHeightInput${layerIndex}`) as HTMLInputElement;
+    if (cropXInput) cropXInput.value = '0';
+    if (cropYInput) cropYInput.value = '0';
+    if (cropWidthInput) cropWidthInput.value = '100';
+    if (cropHeightInput) cropHeightInput.value = '100';
+  }
+
+  private updateLayerCropEnabled(layerIndex: number): void {
+    if (this.layers[layerIndex]) {
+      const enabled = (this.$(`#layerCropEnabled${layerIndex}`) as HTMLInputElement).checked;
+      this.layers[layerIndex]!.cropEnabled = enabled;
+      
+      if (enabled) {
+        this.enableCropControls(layerIndex);
+      } else {
+        this.disableCropControls(layerIndex);
+      }
+      
+      this.renderCanvas();
+    }
+  }
+
+  private enableCropControls(layerIndex: number): void {
+    ['CropX', 'CropY', 'CropWidth', 'CropHeight'].forEach(control => {
+      const slider = this.$(`#layer${control}${layerIndex}`) as HTMLInputElement;
+      const input = this.$(`#layer${control}Input${layerIndex}`) as HTMLInputElement;
+      if (slider) slider.disabled = false;
+      if (input) input.disabled = false;
+    });
+  }
+
+  private disableCropControls(layerIndex: number): void {
+    ['CropX', 'CropY', 'CropWidth', 'CropHeight'].forEach(control => {
+      const slider = this.$(`#layer${control}${layerIndex}`) as HTMLInputElement;
+      const input = this.$(`#layer${control}Input${layerIndex}`) as HTMLInputElement;
+      if (slider) slider.disabled = true;
+      if (input) input.disabled = true;
+    });
+  }
+
+  private updateLayerCrop(layerIndex: number, property: 'cropX' | 'cropY' | 'cropWidth' | 'cropHeight'): void {
+    if (this.layers[layerIndex]) {
+      const inputId = `layer${property.charAt(0).toUpperCase() + property.slice(1)}${layerIndex}`;
+      const value = parseFloat((this.$(` #${inputId}`) as HTMLInputElement).value);
+      
+      this.layers[layerIndex]![property] = value;
+      
+      // Update number input
+      const numberInput = this.$(`#${inputId}Input`) as HTMLInputElement;
+      if (numberInput) numberInput.value = value.toString();
+      
+      // Validate crop bounds
+      this.validateCropBounds(layerIndex);
+      this.renderCanvas();
+    }
+  }
+
+  private updateLayerCropFromInput(layerIndex: number, property: 'cropX' | 'cropY' | 'cropWidth' | 'cropHeight'): void {
+    if (this.layers[layerIndex]) {
+      const inputId = `layer${property.charAt(0).toUpperCase() + property.slice(1)}${layerIndex}`;
+      const numberInput = this.$(`#${inputId}Input`) as HTMLInputElement;
+      const value = parseFloat(numberInput.value);
+      
+      // Validate value ranges
+      let isValid = false;
+      if (property === 'cropX' || property === 'cropY') {
+        isValid = !isNaN(value) && value >= 0 && value <= 90;
+      } else {
+        isValid = !isNaN(value) && value >= 10 && value <= 100;
+      }
+      
+      if (isValid) {
+        this.layers[layerIndex]![property] = value;
+        
+        // Update slider
+        const slider = this.$(`#${inputId}`) as HTMLInputElement;
+        slider.value = value.toString();
+        
+        this.validateCropBounds(layerIndex);
+        this.renderCanvas();
+      }
+    }
+  }
+
+  private validateCropBounds(layerIndex: number): void {
+    const layer = this.layers[layerIndex];
+    if (!layer) return;
+    
+    // Ensure crop doesn't exceed bounds
+    const maxX = 100 - (layer.cropWidth ?? 100);
+    const maxY = 100 - (layer.cropHeight ?? 100);
+    
+    if ((layer.cropX ?? 0) > maxX) {
+      layer.cropX = maxX;
+      (this.$(`#layerCropX${layerIndex}`) as HTMLInputElement).value = maxX.toString();
+      (this.$(`#layerCropXInput${layerIndex}`) as HTMLInputElement).value = maxX.toString();
+    }
+    
+    if ((layer.cropY ?? 0) > maxY) {
+      layer.cropY = maxY;
+      (this.$(`#layerCropY${layerIndex}`) as HTMLInputElement).value = maxY.toString();
+      (this.$(`#layerCropYInput${layerIndex}`) as HTMLInputElement).value = maxY.toString();
+    }
   }
 
   private handleOutputSizeChange(): void {
@@ -361,16 +616,56 @@ export class LayerEditor extends BaseComponent {
     
     this.layers.forEach((layer) => {
       if (layer && layer.visible) {
-        const scaledWidth = layer.image.width * layer.scale;
-        const scaledHeight = layer.image.height * layer.scale;
-        
-        const drawX = centerX + layer.x - scaledWidth / 2;
-        const drawY = centerY + layer.y - scaledHeight / 2;
-        
-        this.ctx.drawImage(layer.image, drawX, drawY, scaledWidth, scaledHeight);
+        if (layer.cropEnabled) {
+          // Calculate crop area in pixels
+          const cropX = (layer.cropX ?? 0) * layer.image.width / 100;
+          const cropY = (layer.cropY ?? 0) * layer.image.height / 100;
+          const cropWidth = (layer.cropWidth ?? 100) * layer.image.width / 100;
+          const cropHeight = (layer.cropHeight ?? 100) * layer.image.height / 100;
+          
+          // Calculate scaled dimensions
+          const scaledWidth = cropWidth * layer.scale;
+          const scaledHeight = cropHeight * layer.scale;
+          
+          const drawX = centerX + layer.x - scaledWidth / 2;
+          const drawY = centerY + layer.y - scaledHeight / 2;
+          
+          // Draw cropped portion
+          this.ctx.drawImage(
+            layer.image,
+            cropX, cropY, cropWidth, cropHeight,  // Source rectangle (crop area)
+            drawX, drawY, scaledWidth, scaledHeight  // Destination rectangle
+          );
+        } else {
+          // Draw full image
+          const scaledWidth = layer.image.width * layer.scale;
+          const scaledHeight = layer.image.height * layer.scale;
+          
+          const drawX = centerX + layer.x - scaledWidth / 2;
+          const drawY = centerY + layer.y - scaledHeight / 2;
+          
+          this.ctx.drawImage(layer.image, drawX, drawY, scaledWidth, scaledHeight);
+        }
       }
     });
 
+    // Draw second guide first (so it appears behind the first guide)
+    if (this.showSecondGuide) {
+      this.ctx.save();
+      this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+      this.ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+      this.ctx.lineWidth = 2;
+      
+      const secondGuideX = centerX - this.secondGuideSize / 2;
+      const secondGuideY = centerY - this.secondGuideSize / 2;
+      
+      this.ctx.fillRect(secondGuideX, secondGuideY, this.secondGuideSize, this.secondGuideSize);
+      this.ctx.strokeRect(secondGuideX, secondGuideY, this.secondGuideSize, this.secondGuideSize);
+      
+      this.ctx.restore();
+    }
+    
+    // Draw first guide on top
     if (this.showGuide) {
       this.ctx.save();
       this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
@@ -455,21 +750,33 @@ export class LayerEditor extends BaseComponent {
     const outputSize = parseInt((this.$('#outputSize') as HTMLSelectElement).value);
     const prefix = (this.$('#layerPrefix') as HTMLInputElement).value || 'layer';
     const quality = parseInt((this.$('#layerQuality') as HTMLInputElement).value);
+    const useOriginalNames = (this.$('#useOriginalNames') as HTMLInputElement).checked;
 
-    const layerOptions: LayerExportOptions = { outputSize, prefix, quality };
+    const layerOptions: LayerExportOptions = { outputSize, prefix, quality, useOriginalNames };
     const files = activeLayers.map(layer => layer.file);
 
     const transformations = this.layers.map((layer, index) => {
       if (!layer) return null;
       
-      const layerName = this.getLayerName(index);
+      let layerName: string;
+      if (useOriginalNames && layer.file) {
+        // Use original filename without extension
+        layerName = layer.file.name.replace(/\.[^/.]+$/, '');
+      } else {
+        layerName = this.getLayerName(index);
+      }
       
       return { 
         visible: layer.visible, 
         scale: layer.scale, 
         x: layer.x, 
         y: layer.y,
-        name: layerName
+        name: layerName,
+        cropEnabled: layer.cropEnabled,
+        cropX: layer.cropX,
+        cropY: layer.cropY,
+        cropWidth: layer.cropWidth,
+        cropHeight: layer.cropHeight
       } as LayerTransformation;
     });
 
@@ -511,6 +818,8 @@ export class LayerEditor extends BaseComponent {
     const preset: LayerPreset = {
       name: presetName,
       guideSize: this.guideSize,
+      showSecondGuide: this.showSecondGuide,
+      secondGuideSize: this.secondGuideSize,
       layers: this.layers.map((layer, index) => {
         const layerName = this.getLayerName(index);
         
@@ -519,7 +828,12 @@ export class LayerEditor extends BaseComponent {
           scale: layer?.scale || 1.0,
           x: layer?.x || 0,
           y: layer?.y || 0,
-          layerName: layerName
+          layerName: layerName,
+          cropEnabled: layer?.cropEnabled || false,
+          cropX: layer?.cropX || 0,
+          cropY: layer?.cropY || 0,
+          cropWidth: layer?.cropWidth || 100,
+          cropHeight: layer?.cropHeight || 100
         };
       })
     };
@@ -564,6 +878,16 @@ export class LayerEditor extends BaseComponent {
     const guideSizeNumberInput = this.$('#guideSizeInput') as HTMLInputElement;
     guideSizeSlider.value = this.guideSize.toString();
     guideSizeNumberInput.value = this.guideSize.toString();
+    
+    // Load second guide settings
+    this.showSecondGuide = preset.showSecondGuide !== undefined ? preset.showSecondGuide : true;
+    this.secondGuideSize = preset.secondGuideSize || 250;
+    const showSecondGuideInput = this.$('#showSecondGuide') as HTMLInputElement;
+    const secondGuideSizeSlider = this.$('#secondGuideSize') as HTMLInputElement;
+    const secondGuideSizeNumberInput = this.$('#secondGuideSizeInput') as HTMLInputElement;
+    showSecondGuideInput.checked = this.showSecondGuide;
+    secondGuideSizeSlider.value = this.secondGuideSize.toString();
+    secondGuideSizeNumberInput.value = this.secondGuideSize.toString();
 
     preset.layers.forEach((presetLayer, index) => {
       const nameText = this.$(`#layerNameText${index}`)!;
@@ -579,6 +903,11 @@ export class LayerEditor extends BaseComponent {
         this.layers[index]!.scale = presetLayer.scale;
         this.layers[index]!.x = presetLayer.x;
         this.layers[index]!.y = presetLayer.y;
+        this.layers[index]!.cropEnabled = presetLayer.cropEnabled || false;
+        this.layers[index]!.cropX = presetLayer.cropX || 0;
+        this.layers[index]!.cropY = presetLayer.cropY || 0;
+        this.layers[index]!.cropWidth = presetLayer.cropWidth || 100;
+        this.layers[index]!.cropHeight = presetLayer.cropHeight || 100;
         
         this.updateAllLayerControls(index);
       }
@@ -610,8 +939,60 @@ export class LayerEditor extends BaseComponent {
   }
 
   private getSavedPresets(): LayerPreset[] {
-    const saved = localStorage.getItem('layerPresets');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('layerPresets');
+      if (!saved) return [];
+      
+      const presets = JSON.parse(saved);
+      
+      // Validate that it's an array
+      if (!Array.isArray(presets)) {
+        console.warn('Invalid presets format, resetting to empty array');
+        return [];
+      }
+      
+      // Migrate old preset format if needed
+      return presets.map(preset => this.migratePreset(preset));
+    } catch (error) {
+      console.error('Error loading presets:', error);
+      // Backup corrupted data before clearing
+      const backup = localStorage.getItem('layerPresets');
+      if (backup) {
+        localStorage.setItem('layerPresets_backup_' + Date.now(), backup);
+      }
+      return [];
+    }
+  }
+  
+  private migratePreset(preset: any): LayerPreset {
+    // Ensure preset has all required fields
+    const migrated: LayerPreset = {
+      name: preset.name || 'Unnamed Preset',
+      guideSize: preset.guideSize || 200,
+      showSecondGuide: preset.showSecondGuide !== undefined ? preset.showSecondGuide : true,
+      secondGuideSize: preset.secondGuideSize || 250,
+      layers: []
+    };
+    
+    // Migrate layers
+    if (Array.isArray(preset.layers)) {
+      migrated.layers = preset.layers.map((layer: any) => ({
+        visible: layer.visible !== undefined ? layer.visible : true,
+        scale: layer.scale !== undefined ? layer.scale : 1.0,
+        x: layer.x !== undefined ? layer.x : 0,
+        y: layer.y !== undefined ? layer.y : 0,
+        layerName: layer.layerName || `Layer`
+      }));
+    } else {
+      // Default 3 layers if missing
+      migrated.layers = [
+        { visible: true, scale: 1.0, x: 0, y: 0, layerName: 'Background' },
+        { visible: true, scale: 1.0, x: 0, y: 0, layerName: 'Avatar' },
+        { visible: true, scale: 1.0, x: 0, y: 0, layerName: 'Frame' }
+      ];
+    }
+    
+    return migrated;
   }
 
   private updateAllLayerControls(layerIndex: number): void {
@@ -620,20 +1001,47 @@ export class LayerEditor extends BaseComponent {
 
     (this.$(`#layerVisible${layerIndex}`) as HTMLInputElement).checked = layer.visible;
     
-    const scaleInput = this.$(`#layerScale${layerIndex}`) as HTMLInputElement;
-    const scaleValue = this.$(`#layerScaleValue${layerIndex}`)!;
-    scaleInput.value = layer.scale.toString();
-    scaleValue.textContent = `${layer.scale.toFixed(2)}x`;
+    const scaleSlider = this.$(`#layerScale${layerIndex}`) as HTMLInputElement;
+    const scaleInput = this.$(`#layerScaleInput${layerIndex}`) as HTMLInputElement;
+    scaleSlider.value = layer.scale.toString();
+    if (scaleInput) scaleInput.value = layer.scale.toFixed(2);
 
-    const xInput = this.$(`#layerX${layerIndex}`) as HTMLInputElement;
-    const xValue = this.$(`#layerXValue${layerIndex}`)!;
-    xInput.value = layer.x.toString();
-    xValue.textContent = `${layer.x}px`;
+    const xSlider = this.$(`#layerX${layerIndex}`) as HTMLInputElement;
+    const xInput = this.$(`#layerXInput${layerIndex}`) as HTMLInputElement;
+    xSlider.value = layer.x.toString();
+    if (xInput) xInput.value = layer.x.toString();
 
-    const yInput = this.$(`#layerY${layerIndex}`) as HTMLInputElement;
-    const yValue = this.$(`#layerYValue${layerIndex}`)!;
-    yInput.value = layer.y.toString();
-    yValue.textContent = `${layer.y}px`;
+    const ySlider = this.$(`#layerY${layerIndex}`) as HTMLInputElement;
+    const yInput = this.$(`#layerYInput${layerIndex}`) as HTMLInputElement;
+    ySlider.value = layer.y.toString();
+    if (yInput) yInput.value = layer.y.toString();
+    
+    // Update crop controls
+    (this.$(`#layerCropEnabled${layerIndex}`) as HTMLInputElement).checked = layer.cropEnabled || false;
+    
+    const cropX = layer.cropX || 0;
+    const cropY = layer.cropY || 0;
+    const cropWidth = layer.cropWidth || 100;
+    const cropHeight = layer.cropHeight || 100;
+    
+    (this.$(`#layerCropX${layerIndex}`) as HTMLInputElement).value = cropX.toString();
+    (this.$(`#layerCropXInput${layerIndex}`) as HTMLInputElement).value = cropX.toString();
+    
+    (this.$(`#layerCropY${layerIndex}`) as HTMLInputElement).value = cropY.toString();
+    (this.$(`#layerCropYInput${layerIndex}`) as HTMLInputElement).value = cropY.toString();
+    
+    (this.$(`#layerCropWidth${layerIndex}`) as HTMLInputElement).value = cropWidth.toString();
+    (this.$(`#layerCropWidthInput${layerIndex}`) as HTMLInputElement).value = cropWidth.toString();
+    
+    (this.$(`#layerCropHeight${layerIndex}`) as HTMLInputElement).value = cropHeight.toString();
+    (this.$(`#layerCropHeightInput${layerIndex}`) as HTMLInputElement).value = cropHeight.toString();
+    
+    // Enable/disable crop controls based on cropEnabled
+    if (layer.cropEnabled) {
+      this.enableCropControls(layerIndex);
+    } else {
+      this.disableCropControls(layerIndex);
+    }
   }
 
   private createDefaultPresets(): void {
@@ -643,6 +1051,8 @@ export class LayerEditor extends BaseComponent {
       const examplePreset: LayerPreset = {
         name: 'Beispiel-Setup',
         guideSize: 180,
+        showSecondGuide: true,
+        secondGuideSize: 280,
         layers: [
           { visible: true, scale: 0.6, x: -4, y: 14, layerName: 'Background' },
           { visible: true, scale: 0.5, x: 0, y: 13, layerName: 'Avatar' },

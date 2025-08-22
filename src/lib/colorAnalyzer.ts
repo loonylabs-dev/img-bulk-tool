@@ -406,7 +406,18 @@ export class ColorAnalyzer {
   private async applyAdvancedAdjustments(buffer: Buffer, options: AdvancedColorOptions): Promise<Buffer> {
     let image = sharp(buffer);
     
-    // Apply individual color adjustments if they differ from 100% (default)
+    // STEP 1: Apply noise reduction FIRST (before other enhancements)
+    // This prevents noise reduction from undoing contrast/sharpness improvements
+    if (options.noiseReduction > 0) {
+      image = await this.applyAdvancedNoiseReduction(image, options.noiseReduction);
+    }
+    
+    // STEP 2: Apply gamma correction early to establish base tonality
+    if (options.gamma !== 1.0) {
+      image = image.gamma(options.gamma);
+    }
+    
+    // STEP 3: Apply individual color adjustments
     const needsColorAdjustment = 
       options.saturationBoost !== 100 || 
       options.brightnessBoost !== 100 || 
@@ -428,7 +439,7 @@ export class ColorAnalyzer {
       image = image.modulate(modulateOptions);
     }
     
-    // Apply contrast adjustment
+    // STEP 4: Apply contrast adjustment AFTER color adjustments
     if (options.contrastBoost !== 100) {
       const contrastFactor = options.contrastBoost / 100;
       
@@ -439,12 +450,7 @@ export class ColorAnalyzer {
       image = image.linear(a, b);
     }
     
-    // Apply gamma correction
-    if (options.gamma !== 1.0) {
-      image = image.gamma(options.gamma);
-    }
-    
-    // Apply sharpening
+    // STEP 5: Apply sharpening LAST to enhance final details
     if (options.sharpness !== 100) {
       if (options.sharpness > 100) {
         // Sharpen more than default
@@ -460,14 +466,51 @@ export class ColorAnalyzer {
       }
     }
     
-    // Apply noise reduction
-    if (options.noiseReduction > 0) {
-      // Use median filter for noise reduction
-      const medianSize = Math.max(1, Math.min(5, Math.floor(options.noiseReduction / 20)));
-      image = image.median(medianSize);
-    }
-    
     // Ensure PNG output
     return await image.png().toBuffer();
+  }
+
+  /**
+   * Advanced noise reduction using multiple algorithms
+   * @param image Sharp image instance
+   * @param intensity Noise reduction intensity (0-100)
+   * @returns Sharp image instance with noise reduction applied
+   */
+  private async applyAdvancedNoiseReduction(image: sharp.Sharp, intensity: number): Promise<sharp.Sharp> {
+    // Convert intensity to different algorithm parameters
+    const normalizedIntensity = Math.max(0, Math.min(100, intensity));
+    
+    if (normalizedIntensity <= 25) {
+      // Low intensity: Light Gaussian blur (preserves details best)
+      const sigma = (normalizedIntensity / 25) * 0.6; // 0 to 0.6
+      return image.blur(sigma);
+      
+    } else if (normalizedIntensity <= 50) {
+      // Medium intensity: Bilateral-like filter simulation
+      // Combines light blur with edge preservation through sharpening
+      const blurSigma = 0.6 + ((normalizedIntensity - 25) / 25) * 0.8; // 0.6 to 1.4
+      const sharpenSigma = 1.0;
+      const sharpenFlat = 0.5;
+      const sharpenJagged = 1.0;
+      
+      return image
+        .blur(blurSigma)
+        .sharpen(sharpenSigma, sharpenFlat, sharpenJagged);
+        
+    } else if (normalizedIntensity <= 75) {
+      // High intensity: Adaptive median filter
+      const medianSize = Math.min(3, Math.max(1, Math.floor((normalizedIntensity - 50) / 25 * 2) + 1));
+      return image.median(medianSize);
+      
+    } else {
+      // Very high intensity: Multi-pass noise reduction
+      // Combines median filter with gaussian for maximum noise removal
+      const medianSize = 3;
+      const gaussianSigma = 1.2 + ((normalizedIntensity - 75) / 25) * 0.8; // 1.2 to 2.0
+      
+      // Apply median first, then gaussian
+      const tempBuffer = await image.median(medianSize).png().toBuffer();
+      return sharp(tempBuffer).blur(gaussianSigma);
+    }
   }
 }

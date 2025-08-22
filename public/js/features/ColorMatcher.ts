@@ -184,10 +184,10 @@ export class ColorMatcher extends BaseComponent {
       this.showProgress();
     });
 
-    eventBus.on('color-processing-complete', (data) => {
+    eventBus.on('color-processing-complete', async (data) => {
       this.hideProgress();
       if (data.payload) {
-        this.showResults(data.payload);
+        await this.showResults(data.payload);
       }
     });
 
@@ -646,7 +646,7 @@ export class ColorMatcher extends BaseComponent {
     progressOverlay.style.display = 'none';
   }
 
-  private showResults(results: any[]): void {
+  private async showResults(results: any[]): Promise<void> {
     if (!results || results.length === 0) {
       console.log('No results to display');
       return;
@@ -654,56 +654,120 @@ export class ColorMatcher extends BaseComponent {
 
     this.resultsSection.style.display = 'block';
     
-    const resultItems = results.map((result) => {
+    // Create result items with thumbnails
+    const resultItems = await Promise.all(results.map(async (result) => {
       const processedFile = result.processed[0]; // First processed file
+      
+      // Generate thumbnail preview
+      const thumbnailHtml = await this.createResultThumbnail(processedFile.url, processedFile.filename);
+      
       return `
         <div class="result-item">
+          ${thumbnailHtml}
           <div class="result-info">
             <h4>${result.original}</h4>
             <p>Original: ${this.fileService.formatFileSize(result.originalSize)}</p>
-            <p>Processed: ${this.fileService.formatFileSize(processedFile.size)}</p>
+            <p>Angepasst: ${this.fileService.formatFileSize(processedFile.size)}</p>
           </div>
           <div class="result-actions">
             <a href="${processedFile.url}" download="${processedFile.filename}" class="download-btn">
-              Download
+              📥 Download
             </a>
-            <button class="preview-btn" data-url="${processedFile.url}">
-              Preview
-            </button>
           </div>
         </div>
       `;
-    }).join('');
+    }));
 
     this.resultsList.innerHTML = `
       <div class="results-header">
-        <h3>Color Matching Ergebnisse (${results.length} Bilder)</h3>
+        <h3>🎨 Color Matching Ergebnisse (${results.length} Bilder)</h3>
         <p>Alle bearbeiteten Bilder wurden erfolgreich erstellt.</p>
       </div>
       <div class="results-grid">
-        ${resultItems}
+        ${resultItems.join('')}
       </div>
     `;
 
     // Enable download all button
     this.downloadAllBtn.disabled = false;
-    this.downloadAllBtn.textContent = `Alle herunterladen (${results.length})`;
-
-    // Bind preview events for individual files
-    this.bindResultEvents(results);
+    this.downloadAllBtn.textContent = `📥 Alle herunterladen (${results.length})`;
   }
 
-  private bindResultEvents(_results: any[]): void {
-    const previewButtons = this.resultsList.querySelectorAll('.preview-btn');
-    
-    previewButtons.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const url = (btn as HTMLElement).dataset['url'];
-        if (url) {
-          window.open(url, '_blank');
+  private async createResultThumbnail(url: string, filename: string): Promise<string> {
+    try {
+      // Create a unique ID for this thumbnail
+      const thumbnailId = `thumbnail-${filename.replace(/[^a-zA-Z0-9]/g, '-')}`;
+      
+      // Return HTML with placeholder that will be loaded after DOM insertion
+      setTimeout(() => {
+        this.loadThumbnailImage(url, thumbnailId);
+      }, 100);
+      
+      return `
+        <div class="result-thumbnail">
+          <canvas id="${thumbnailId}" width="100" height="100" style="background: #f0f0f0; border: 1px solid #ddd; border-radius: 6px;"></canvas>
+        </div>
+      `;
+    } catch (error) {
+      console.error('Error creating thumbnail:', error);
+      return `
+        <div class="result-thumbnail">
+          <div class="thumbnail-placeholder">🖼️</div>
+        </div>
+      `;
+    }
+  }
+
+  private async loadThumbnailImage(url: string, canvasId: string): Promise<void> {
+    try {
+      const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        // Enable high-quality rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Calculate aspect ratio and center the image
+        const aspectRatio = img.width / img.height;
+        let drawWidth = canvas.width;
+        let drawHeight = canvas.height;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (aspectRatio > 1) {
+          drawHeight = canvas.width / aspectRatio;
+          offsetY = (canvas.height - drawHeight) / 2;
+        } else {
+          drawWidth = canvas.height * aspectRatio;
+          offsetX = (canvas.width - drawWidth) / 2;
         }
-      });
-    });
+
+        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+      };
+      
+      img.onerror = () => {
+        // Show placeholder on error
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#999';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🖼️', canvas.width / 2, canvas.height / 2 + 8);
+      };
+      
+      img.src = url;
+    } catch (error) {
+      console.error('Error loading thumbnail:', error);
+    }
   }
 
   private async downloadAll(): Promise<void> {

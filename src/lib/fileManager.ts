@@ -6,16 +6,28 @@ export class FileManager {
     fs.ensureDirSync(this.outputDir);
   }
 
-  async getUniqueFilename(prefix: string, startNumber: number): Promise<string> {
-    let counter = startNumber;
-    let filename = `${prefix}_${counter}.png`;
+  async getUniqueFilename(prefix: string, startNumber: number, useNumbering: boolean = true, partSuffix?: string): Promise<string> {
+    console.log('FileManager.getUniqueFilename called with:', { prefix, startNumber, useNumbering, partSuffix });
     
-    while (await this.fileExists(filename)) {
-      counter++;
-      filename = `${prefix}_${counter}.png`;
+    if (!useNumbering) {
+      // Without numbering, use part suffix if provided (for split mode), otherwise just prefix
+      let filename = partSuffix ? `${prefix}_${partSuffix}.png` : `${prefix}.png`;
+      console.log('Using filename without numbering (will overwrite if exists):', filename);
+      return filename;
+    } else {
+      // With numbering (original behavior)
+      let counter = startNumber;
+      let filename = `${prefix}_${counter}.png`;
+      console.log('Using numbering, starting with:', filename);
+      
+      while (await this.fileExists(filename)) {
+        counter++;
+        filename = `${prefix}_${counter}.png`;
+      }
+      
+      console.log('Final filename (with numbering):', filename);
+      return filename;
     }
-    
-    return filename;
   }
 
   async getNextAvailableNumber(prefix: string): Promise<number> {

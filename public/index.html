@@ -193,6 +193,18 @@
                 <div class="option-group">
                     <label>Globales Präfix (optional):</label>
                     <input type="text" id="globalPrefix" placeholder="z.B. icon, tile, asset">
+                    <div class="checkbox-container" style="margin-top: 10px;">
+                        <input type="checkbox" id="combineWithOriginalName">
+                        <label for="combineWithOriginalName">Mit Originalnamen kombinieren (z.B. item_icon_horse)</label>
+                    </div>
+                    <div class="checkbox-container" style="margin-top: 10px;">
+                        <input type="checkbox" id="useSequentialNumbering" checked>
+                        <label for="useSequentialNumbering">Fortlaufende Nummerierung verwenden (z.B. _1, _2, _3)</label>
+                    </div>
+                    <div class="checkbox-container" style="margin-top: 10px;">
+                        <input type="checkbox" id="useOriginalFileNames">
+                        <label for="useOriginalFileNames">Originalnamen 1:1 verwenden (überschreibt bestehende Dateien)</label>
+                    </div>
                     <p class="hint">Wird für alle Bilder verwendet, wenn kein individuelles Präfix gesetzt ist</p>
                 </div>
 
@@ -265,16 +277,32 @@
                                     <div class="canvas-container">
                                         <canvas id="layerCanvas" width="400" height="400"></canvas>
                                         <div class="canvas-controls">
-                                            <label>
-                                                <input type="checkbox" id="showGuide" checked> 
-                                                Guide anzeigen
-                                            </label>
-                                            <label>
-                                                Guide-Größe: 
-                                                <input type="range" id="guideSize" min="50" max="300" value="200">
-                                                <input type="number" id="guideSizeInput" min="50" max="300" value="200">
-                                                <span>px</span>
-                                            </label>
+                                            <div class="guide-control-group">
+                                                <h4>Guide 1 (Rot)</h4>
+                                                <label>
+                                                    <input type="checkbox" id="showGuide" checked> 
+                                                    Anzeigen
+                                                </label>
+                                                <label>
+                                                    Größe: 
+                                                    <input type="range" id="guideSize" min="50" max="300" value="200">
+                                                    <input type="number" id="guideSizeInput" min="50" max="300" value="200">
+                                                    <span>px</span>
+                                                </label>
+                                            </div>
+                                            <div class="guide-control-group">
+                                                <h4>Guide 2 (Grün)</h4>
+                                                <label>
+                                                    <input type="checkbox" id="showSecondGuide" checked> 
+                                                    Anzeigen
+                                                </label>
+                                                <label>
+                                                    Größe: 
+                                                    <input type="range" id="secondGuideSize" min="50" max="400" value="250">
+                                                    <input type="number" id="secondGuideSizeInput" min="50" max="400" value="250">
+                                                    <span>px</span>
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -306,73 +334,208 @@
                                     <div class="layer-control-panels-vertical">
                                         <div class="layer-control-panel" id="layerControl0">
                                             <div class="layer-header">
-                                                <h4 class="layer-name-text" id="layerNameText0">Background</h4>
-                                                <button type="button" class="layer-name-edit-btn" id="layerEditBtn0">✏️</button>
-                                                <div class="layer-name-edit-mode" id="layerEditMode0" style="display: none;">
-                                                    <input type="text" class="layer-name-input" id="layerName0" value="Background">
-                                                    <button type="button" class="layer-name-save-btn" id="layerSaveBtn0">✓</button>
-                                                    <button type="button" class="layer-name-cancel-btn" id="layerCancelBtn0">✗</button>
+                                                <!-- Name & Edit Button -->
+                                                <div class="layer-name-section">
+                                                    <h4 class="layer-name-text" id="layerNameText0">Background</h4>
+                                                    <button type="button" class="layer-name-edit-btn" id="layerEditBtn0">✏️</button>
+                                                    <div class="layer-name-edit-mode" id="layerEditMode0" style="display: none;">
+                                                        <input type="text" class="layer-name-input" id="layerName0" value="Background">
+                                                        <button type="button" class="layer-name-save-btn" id="layerSaveBtn0">✓</button>
+                                                        <button type="button" class="layer-name-cancel-btn" id="layerCancelBtn0">✗</button>
+                                                    </div>
+                                                </div>
+                                                <!-- Quick Controls -->
+                                                <div class="layer-quick-controls">
+                                                    <label class="quick-control">
+                                                        <input type="checkbox" id="layerVisible0" checked>
+                                                        <span>Sichtbar</span>
+                                                    </label>
+                                                    <label class="quick-control">
+                                                        <input type="checkbox" id="layerCropEnabled0">
+                                                        <span>Zuschnitt</span>
+                                                    </label>
                                                 </div>
                                             </div>
-                                            <div class="control-group">
-                                                <label>Sichtbarkeit: <input type="checkbox" id="layerVisible0" checked></label>
-                                            </div>
-                                            <div class="control-group">
-                                                <label>Skalierung: <input type="range" id="layerScale0" min="0.1" max="3" step="0.02" value="1"> <span id="layerScaleValue0">1.0x</span></label>
-                                            </div>
-                                            <div class="control-group">
-                                                <label>Position X: <input type="range" id="layerX0" min="-200" max="200" value="0"> <span id="layerXValue0">0px</span></label>
-                                            </div>
-                                            <div class="control-group">
-                                                <label>Position Y: <input type="range" id="layerY0" min="-200" max="200" value="0"> <span id="layerYValue0">0px</span></label>
+                                            <div class="layer-control-columns">
+                                                <!-- Left column: Existing controls -->
+                                                <div class="layer-control-column">
+                                                    <div class="control-group">
+                                                        <label>Skalierung:</label>
+                                                        <input type="range" id="layerScale0" min="0.1" max="3" step="0.01" value="1">
+                                                        <input type="number" id="layerScaleInput0" class="layer-number-input" min="0.1" max="3" step="0.01" value="1.00">
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Position X:</label>
+                                                        <input type="range" id="layerX0" min="-200" max="200" value="0">
+                                                        <input type="number" id="layerXInput0" class="layer-number-input" min="-200" max="200" step="1" value="0">
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Position Y:</label>
+                                                        <input type="range" id="layerY0" min="-200" max="200" value="0">
+                                                        <input type="number" id="layerYInput0" class="layer-number-input" min="-200" max="200" step="1" value="0">
+                                                    </div>
+                                                </div>
+                                                <!-- Right column: Crop controls -->
+                                                <div class="layer-control-column">
+                                                    <div class="control-group">
+                                                        <label>Start X:</label>
+                                                        <input type="range" id="layerCropX0" min="0" max="90" value="0" disabled>
+                                                        <input type="number" id="layerCropXInput0" class="layer-number-input" min="0" max="90" step="1" value="0" disabled>
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Start Y:</label>
+                                                        <input type="range" id="layerCropY0" min="0" max="90" value="0" disabled>
+                                                        <input type="number" id="layerCropYInput0" class="layer-number-input" min="0" max="90" step="1" value="0" disabled>
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Breite:</label>
+                                                        <input type="range" id="layerCropWidth0" min="10" max="100" value="100" disabled>
+                                                        <input type="number" id="layerCropWidthInput0" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Höhe:</label>
+                                                        <input type="range" id="layerCropHeight0" min="10" max="100" value="100" disabled>
+                                                        <input type="number" id="layerCropHeightInput0" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         
                                         <div class="layer-control-panel" id="layerControl1">
                                             <div class="layer-header">
-                                                <h4 class="layer-name-text" id="layerNameText1">Avatar</h4>
-                                                <button type="button" class="layer-name-edit-btn" id="layerEditBtn1">✏️</button>
-                                                <div class="layer-name-edit-mode" id="layerEditMode1" style="display: none;">
-                                                    <input type="text" class="layer-name-input" id="layerName1" value="Avatar">
-                                                    <button type="button" class="layer-name-save-btn" id="layerSaveBtn1">✓</button>
-                                                    <button type="button" class="layer-name-cancel-btn" id="layerCancelBtn1">✗</button>
+                                                <!-- Name & Edit Button -->
+                                                <div class="layer-name-section">
+                                                    <h4 class="layer-name-text" id="layerNameText1">Avatar</h4>
+                                                    <button type="button" class="layer-name-edit-btn" id="layerEditBtn1">✏️</button>
+                                                    <div class="layer-name-edit-mode" id="layerEditMode1" style="display: none;">
+                                                        <input type="text" class="layer-name-input" id="layerName1" value="Avatar">
+                                                        <button type="button" class="layer-name-save-btn" id="layerSaveBtn1">✓</button>
+                                                        <button type="button" class="layer-name-cancel-btn" id="layerCancelBtn1">✗</button>
+                                                    </div>
+                                                </div>
+                                                <!-- Quick Controls -->
+                                                <div class="layer-quick-controls">
+                                                    <label class="quick-control">
+                                                        <input type="checkbox" id="layerVisible1" checked>
+                                                        <span>Sichtbar</span>
+                                                    </label>
+                                                    <label class="quick-control">
+                                                        <input type="checkbox" id="layerCropEnabled1">
+                                                        <span>Zuschnitt</span>
+                                                    </label>
                                                 </div>
                                             </div>
-                                            <div class="control-group">
-                                                <label>Sichtbarkeit: <input type="checkbox" id="layerVisible1" checked></label>
-                                            </div>
-                                            <div class="control-group">
-                                                <label>Skalierung: <input type="range" id="layerScale1" min="0.1" max="3" step="0.02" value="1"> <span id="layerScaleValue1">1.0x</span></label>
-                                            </div>
-                                            <div class="control-group">
-                                                <label>Position X: <input type="range" id="layerX1" min="-200" max="200" value="0"> <span id="layerXValue1">0px</span></label>
-                                            </div>
-                                            <div class="control-group">
-                                                <label>Position Y: <input type="range" id="layerY1" min="-200" max="200" value="0"> <span id="layerYValue1">0px</span></label>
+                                            <div class="layer-control-columns">
+                                                <!-- Left column: Existing controls -->
+                                                <div class="layer-control-column">
+                                                    <div class="control-group">
+                                                        <label>Skalierung:</label>
+                                                        <input type="range" id="layerScale1" min="0.1" max="3" step="0.02" value="1">
+                                                        <input type="number" id="layerScaleInput1" class="layer-number-input" min="0.1" max="3" step="0.01" value="1.00">
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Position X:</label>
+                                                        <input type="range" id="layerX1" min="-200" max="200" value="0">
+                                                        <input type="number" id="layerXInput1" class="layer-number-input" min="-200" max="200" step="1" value="0">
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Position Y:</label>
+                                                        <input type="range" id="layerY1" min="-200" max="200" value="0">
+                                                        <input type="number" id="layerYInput1" class="layer-number-input" min="-200" max="200" step="1" value="0">
+                                                    </div>
+                                                </div>
+                                                <!-- Right column: Crop controls -->
+                                                <div class="layer-control-column">
+                                                    <div class="control-group">
+                                                        <label>Start X:</label>
+                                                        <input type="range" id="layerCropX1" min="0" max="90" value="0" disabled>
+                                                        <input type="number" id="layerCropXInput1" class="layer-number-input" min="0" max="90" step="1" value="0" disabled>
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Start Y:</label>
+                                                        <input type="range" id="layerCropY1" min="0" max="90" value="0" disabled>
+                                                        <input type="number" id="layerCropYInput1" class="layer-number-input" min="0" max="90" step="1" value="0" disabled>
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Breite:</label>
+                                                        <input type="range" id="layerCropWidth1" min="10" max="100" value="100" disabled>
+                                                        <input type="number" id="layerCropWidthInput1" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Höhe:</label>
+                                                        <input type="range" id="layerCropHeight1" min="10" max="100" value="100" disabled>
+                                                        <input type="number" id="layerCropHeightInput1" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         
                                         <div class="layer-control-panel" id="layerControl2">
                                             <div class="layer-header">
-                                                <h4 class="layer-name-text" id="layerNameText2">Frame</h4>
-                                                <button type="button" class="layer-name-edit-btn" id="layerEditBtn2">✏️</button>
-                                                <div class="layer-name-edit-mode" id="layerEditMode2" style="display: none;">
-                                                    <input type="text" class="layer-name-input" id="layerName2" value="Frame">
-                                                    <button type="button" class="layer-name-save-btn" id="layerSaveBtn2">✓</button>
-                                                    <button type="button" class="layer-name-cancel-btn" id="layerCancelBtn2">✗</button>
+                                                <!-- Name & Edit Button -->
+                                                <div class="layer-name-section">
+                                                    <h4 class="layer-name-text" id="layerNameText2">Frame</h4>
+                                                    <button type="button" class="layer-name-edit-btn" id="layerEditBtn2">✏️</button>
+                                                    <div class="layer-name-edit-mode" id="layerEditMode2" style="display: none;">
+                                                        <input type="text" class="layer-name-input" id="layerName2" value="Frame">
+                                                        <button type="button" class="layer-name-save-btn" id="layerSaveBtn2">✓</button>
+                                                        <button type="button" class="layer-name-cancel-btn" id="layerCancelBtn2">✗</button>
+                                                    </div>
+                                                </div>
+                                                <!-- Quick Controls -->
+                                                <div class="layer-quick-controls">
+                                                    <label class="quick-control">
+                                                        <input type="checkbox" id="layerVisible2" checked>
+                                                        <span>Sichtbar</span>
+                                                    </label>
+                                                    <label class="quick-control">
+                                                        <input type="checkbox" id="layerCropEnabled2">
+                                                        <span>Zuschnitt</span>
+                                                    </label>
                                                 </div>
                                             </div>
-                                            <div class="control-group">
-                                                <label>Sichtbarkeit: <input type="checkbox" id="layerVisible2" checked></label>
-                                            </div>
-                                            <div class="control-group">
-                                                <label>Skalierung: <input type="range" id="layerScale2" min="0.1" max="3" step="0.02" value="1"> <span id="layerScaleValue2">1.0x</span></label>
-                                            </div>
-                                            <div class="control-group">
-                                                <label>Position X: <input type="range" id="layerX2" min="-200" max="200" value="0"> <span id="layerXValue2">0px</span></label>
-                                            </div>
-                                            <div class="control-group">
-                                                <label>Position Y: <input type="range" id="layerY2" min="-200" max="200" value="0"> <span id="layerYValue2">0px</span></label>
+                                            <div class="layer-control-columns">
+                                                <!-- Left column: Existing controls -->
+                                                <div class="layer-control-column">
+                                                    <div class="control-group">
+                                                        <label>Skalierung:</label>
+                                                        <input type="range" id="layerScale2" min="0.1" max="3" step="0.02" value="1">
+                                                        <input type="number" id="layerScaleInput2" class="layer-number-input" min="0.1" max="3" step="0.01" value="1.00">
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Position X:</label>
+                                                        <input type="range" id="layerX2" min="-200" max="200" value="0">
+                                                        <input type="number" id="layerXInput2" class="layer-number-input" min="-200" max="200" step="1" value="0">
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Position Y:</label>
+                                                        <input type="range" id="layerY2" min="-200" max="200" value="0">
+                                                        <input type="number" id="layerYInput2" class="layer-number-input" min="-200" max="200" step="1" value="0">
+                                                    </div>
+                                                </div>
+                                                <!-- Right column: Crop controls -->
+                                                <div class="layer-control-column">
+                                                    <div class="control-group">
+                                                        <label>Start X:</label>
+                                                        <input type="range" id="layerCropX2" min="0" max="90" value="0" disabled>
+                                                        <input type="number" id="layerCropXInput2" class="layer-number-input" min="0" max="90" step="1" value="0" disabled>
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Start Y:</label>
+                                                        <input type="range" id="layerCropY2" min="0" max="90" value="0" disabled>
+                                                        <input type="number" id="layerCropYInput2" class="layer-number-input" min="0" max="90" step="1" value="0" disabled>
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Breite:</label>
+                                                        <input type="range" id="layerCropWidth2" min="10" max="100" value="100" disabled>
+                                                        <input type="number" id="layerCropWidthInput2" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
+                                                    </div>
+                                                    <div class="control-group">
+                                                        <label>Höhe:</label>
+                                                        <input type="range" id="layerCropHeight2" min="10" max="100" value="100" disabled>
+                                                        <input type="number" id="layerCropHeightInput2" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -403,6 +566,12 @@
                                 <div class="control-group">
                                     <label for="layerPrefix">Dateiname-Präfix:</label>
                                     <input type="text" id="layerPrefix" placeholder="layer" value="layer">
+                                </div>
+                                <div class="control-group">
+                                    <label>
+                                        <input type="checkbox" id="useOriginalNames" checked>
+                                        Originalnamen verwenden (überschreibt bestehende Dateien)
+                                    </label>
                                 </div>
                                 <button id="exportLayers" class="export-btn" disabled>
                                     🚀 Layer exportieren
