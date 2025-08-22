@@ -31,6 +31,22 @@ Ein TypeScript-basiertes Tool zum Zerlegen, Komprimieren und Bearbeiten von Bild
   - Komprimierungsqualität einstellbar (50-100%)
 - **Auto-Scaling**: Bilder werden beim Laden automatisch auf Ausgabegröße angepasst
 
+### 🎨 Color Matching Tab (NEU!)
+- **Referenz-basierte Farbkorrektur**: Passe Bilder an ein Referenzbild an
+- **Live-Vorschau**: 3-Canvas-System (Original, Referenz, Angepasst) mit Echtzeit-Updates
+- **Erweiterte Farbkontrollen**:
+  - Intensität (0-300%): Stärke der Farbanpassung
+  - Sättigung (0-300%): Lebendigkeit der Farben
+  - Helligkeit (30-200%): Gesamthelligkeit
+  - Kontrast (50-200%): Unterschied zwischen hellen und dunklen Bereichen
+  - Farbton-Verschiebung (-180° bis +180°): Farbspektrum-Rotation
+  - Schärfe (0-300%): Bildschärfe und Details
+  - Rauschreduktion (0-100%): Glättung von Bildartefakten
+  - Gamma-Korrektur (0.5-2.0): Tonwert-Anpassung
+- **Batch-Verarbeitung**: Mehrere Bilder gleichzeitig an ein Referenzbild anpassen
+- **Debounced Preview**: Performance-optimierte Vorschau mit 500ms Verzögerung
+- **Reset-Funktion**: Alle Einstellungen auf Standardwerte zurücksetzen
+
 ## Installation
 
 1. Dependencies installieren:
@@ -59,6 +75,7 @@ npm run dev
 2. Tab auswählen:
    - **📦 Bulk Verarbeitung**: Für Batch-Bildbearbeitung
    - **🎨 Layer Editor**: Für Layer-basiertes Compositing
+   - **🎨 Color Matching**: Für referenz-basierte Farbkorrektur
 
 ### Bulk-Verarbeitung
 1. Bilder per Drag & Drop oder Dateiauswahl hochladen (max. 20)
@@ -95,6 +112,25 @@ npm run dev
    - Dateiname-Präfix eingeben
 6. "Layer exportieren" klicken
 
+### Color Matching
+1. **Referenzbild hochladen**: Erstes Bild per Drag & Drop oder Klick hochladen
+   - Dieses Bild bestimmt die Ziel-Farbcharakteristik
+   - Vorschau wird automatisch angezeigt
+2. **Zielbilder hinzufügen**: Bilder, die angepasst werden sollen
+   - Batch-Upload von mehreren Bildern möglich
+   - Einzelne Bilder können entfernt werden
+3. **Live-Vorschau nutzen**: 
+   - 3-Canvas-Ansicht: Original, Referenz, Angepasst
+   - Vorschau aktualisiert sich automatisch bei Änderungen
+4. **Farbkontrollen anpassen**:
+   - **Basis-Einstellungen**: Intensität und Qualität
+   - **Erweiterte Kontrollen**: Sättigung, Helligkeit, Kontrast
+   - **Spezial-Effekte**: Farbton-Verschiebung, Schärfe, Rauschreduktion
+   - **Tonwert**: Gamma-Korrektur für feine Anpassungen
+5. **Reset-Option**: Alle Einstellungen auf Standardwerte zurücksetzen
+6. **Verarbeitung starten**: "🎨 Color Matching starten" klicken
+7. **Ergebnisse herunterladen**: Einzeln oder alle Dateien auf einmal
+
 ## 🎯 Auto-Trim mit fester Zielgröße Feature
 
 Das neue Auto-Trim Feature löst ein häufiges Problem bei der Bildbearbeitung:
@@ -121,6 +157,28 @@ Die Option "Feste Zielgröße nach Auto-Trim" kombiniert drei Schritte:
 3. "Feste Zielgröße nach Auto-Trim" aktivieren
 4. Zielgröße eingeben (z.B. 512×512)
 5. Verarbeiten → Ergebnis: Exakte Abmessungen mit zentriertem Inhalt
+
+## 🎨 Color Matching Anwendungsfälle
+
+Das Color Matching Feature eignet sich besonders für:
+
+### Konsistente Bildserien
+- **Produktfotografie**: Einheitlicher Look für E-Commerce-Kataloge
+- **Portfolio-Optimierung**: Harmonische Farbstimmung in Bildergalerien
+- **Social Media**: Konsistentes Branding über mehrere Posts
+- **Event-Fotografie**: Einheitliche Farbkorrektur für ganze Fotoserien
+
+### Kreative Anwendungen
+- **Vintage-Look**: Übertragung eines nostalgischen Farbstils
+- **Film-Ästhetik**: Nachahmen von Kinolook und Filmlooks
+- **Künstlerische Effekte**: Experimentelle Farbkombinationen
+- **Mood-Anpassung**: Warme/kalte Farbstimmungen übertragen
+
+### Technische Korrekturen
+- **Weißabgleich-Korrektur**: Konsistente Farbtemperatur
+- **Lighting-Anpassung**: Ausgleich unterschiedlicher Beleuchtungssituationen
+- **Monitor-Kalibrierung**: Anpassung an Referenz-Standards
+- **Print-Vorbereitung**: Optimierung für spezifische Ausgabemedien
 
 ## Dateinamen-Schema
 
@@ -168,7 +226,8 @@ img-bulk-tool/
 │       │   └── TabComponent.ts   # Tab-System Manager
 │       ├── features/             # Feature-Module
 │       │   ├── BulkProcessor.ts  # Bulk-Verarbeitung Feature
-│       │   └── LayerEditor.ts    # Layer-Editor Feature
+│       │   ├── LayerEditor.ts    # Layer-Editor Feature
+│       │   └── ColorMatcher.ts   # Color Matching Feature
 │       ├── services/             # Business Logic Layer
 │       │   ├── ApiService.ts     # REST API Communication
 │       │   └── FileService.ts    # File-Handling Logic

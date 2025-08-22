@@ -69,12 +69,48 @@ Added sophisticated layer-based image editing with tab-separated UI:
 - **Image Processing**: `processLayerImage()` method handles scaling, positioning, and canvas composition
 - **Sharp Integration**: Layer composition with transparency preservation
 
+## Color Matching Feature (Tab-Based)
+Advanced color correction system for matching images to a reference image's color characteristics:
+
+### Color Matching Components
+- **Reference Image Upload**: Single drag & drop zone for target color characteristics
+- **Bulk Image Upload**: Multiple image selection for batch color matching
+- **3-Canvas Preview System**: Original, Reference, and Adjusted images with real-time updates
+- **Extended Color Controls**: 9 precision sliders for comprehensive color adjustment
+- **Debounced Preview**: Performance-optimized live preview with 500ms debounce
+
+### Color Control System
+- **Intensity Control**: Strength of color matching (0-300%)
+- **Saturation Boost**: Color vividness adjustment (0-300%)
+- **Brightness/Contrast**: Luminosity and range controls (30-200%, 50-200%)
+- **Hue Shift**: Color spectrum rotation (-180° to +180°)
+- **Sharpness**: Detail enhancement (0-300%)
+- **Noise Reduction**: Artifact smoothing (0-100%)
+- **Gamma Correction**: Tone curve adjustment (0.5-2.0)
+- **Quality**: Compression level (50-100%)
+
+### Backend Color Processing
+- **API Route**: `/api/color-match` with `ColorMatchOptions` interface
+- **Preview API**: `/api/color-preview` for real-time canvas updates
+- **Image Processing**: Color analysis and transformation using Sharp.js color operations
+- **Batch Processing**: Multiple images processed with consistent reference matching
+
+### ColorAnalyzer Module (`src/lib/colorAnalyzer.ts`)
+Advanced color analysis and matching engine:
+- **Color Statistics**: HSV-based analysis (saturation, brightness, contrast, RGB averages)
+- **Smart Sampling**: Performance-optimized pixel sampling (max 10k samples per image)
+- **Adjustment Calculation**: Non-linear scaling with intensity amplification for dramatic effects
+- **Advanced Processing**: Multi-step color transformation with gamma, noise reduction, sharpening
+- **Batch Operations**: Efficient processing of multiple images with single reference analysis
+- **Preview Generation**: Real-time preview with customizable size constraints
+
 ## Important Notes
 - Always run `npm run build` before testing changes in production mode
 - Development uses Vite dev server on port 3001 with API proxy to 3000
 - Smart Crop UI visibility controlled by `handleSmartCropChange()` and `handleCropModeChange()` handlers
 - Image processing supports PNG transparency preservation throughout the pipeline
 - Layer Editor accessible via "🎨 Layer Editor" tab, bulk processing via "📦 Bulk Verarbeitung"
+- Color Matching accessible via "🎨 Color Matching" tab for reference-based color correction
 
 ## Lessons Learned & Best Practices
 
@@ -185,6 +221,14 @@ document.addEventListener('DOMContentLoaded', initFunction);
 - **Display**: Show 2 decimal places with `toFixed(2)` for scale values
 - **Number Inputs**: Provide both slider and number input for critical values
 - **Bidirectional Sync**: Keep slider and number input synchronized
+
+### Color Matching Performance
+🎨 **Real-time Preview Optimization**:
+- **Debounced Updates**: 500ms delay prevents excessive API calls during slider adjustments
+- **Canvas Rendering**: Hardware-accelerated with `imageSmoothingQuality: 'high'`
+- **Smart Sampling**: ColorAnalyzer samples max 10k pixels for fast analysis
+- **Preview Sizing**: Automatic resize to 400px max dimension for responsive previews
+- **Error Handling**: Graceful fallback to original image on processing errors
 
 ### Modular Architecture Refactoring
 🏗️ **Frontend Monolith → Modular Architecture Best Practices**:
