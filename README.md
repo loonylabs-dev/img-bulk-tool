@@ -1,268 +1,232 @@
-# Bild-Bearbeitungs-Tool
+# Image Bulk Processing Tool
 
-Ein TypeScript-basiertes Tool zum Zerlegen, Komprimieren und Bearbeiten von Bildern mit einer benutzerfreundlichen Web-Oberfläche.
+A TypeScript-based web application for splitting, compressing, and resizing images with an intuitive drag & drop interface. Features Smart Crop functionality for intelligent content centering and advanced layer-based editing capabilities.
 
-## Features
+## Table of Contents
 
-### 📦 Bulk-Verarbeitung Tab
-- **Bildzerlegung**: Quadratische Bilder in 4 gleich große Teile zerlegen
-- **Komprimierung**: PNG-Komprimierung (einstellbare Qualität 50-100%, Standard: 100%)
-- **Größenänderung**: Bilder auf beliebige Größe skalieren
-- **Auto-Trim** (NEU!): Automatisches Entfernen transparenter Bereiche
-  - Minimaler Abstand konfigurierbar (0-50px, Standard: 2px)
-  - Erkennungstoleranz einstellbar (5-100, Standard: 100)
-  - **Feste Zielgröße nach Auto-Trim** (NEU!): Getrimte Bilder auf exakte Größe skalieren mit Beibehaltung der Proportionen
-- **Smart Crop**: Intelligente Inhaltserkennung mit konfigurierbarem Padding (uniform oder individuelle Seiten)
-- **Batch-Verarbeitung**: Bis zu 20 Bilder gleichzeitig bearbeiten
-- **Transparenz-Erhaltung**: PNG-Transparenz bleibt bei allen Operationen erhalten
-- **Intelligente Benennung**: Präfix + fortlaufende Nummerierung mit Kollisionsvermeidung
+- [🚀 Quick Start](#-quick-start)
+- [✨ Features](#-features)
+- [📦 Installation](#-installation)
+- [🎯 Usage](#-usage)
+- [🏗️ Architecture](#️-architecture)
+- [📁 File Naming](#-file-naming)
+- [🛠️ Scripts](#️-scripts)
 
-### 🎨 Layer Editor Tab (NEU!)
-- **3-Layer-System**: Bis zu 3 Bilder als Layer übereinander positionieren
-- **Live-Vorschau**: Echtzeit-Canvas-Rendering mit rotem Alignment-Guide (50% Transparenz)
-- **Layer-Kontrollen**: 
-  - Sichtbarkeit ein/aus
-  - Skalierung (0.1x - 3.0x in 0.05er Schritten)
-  - X/Y-Position (-200px bis +200px)
-- **Preset-System**: Layer-Konfigurationen speichern und laden (localStorage)
-- **Guide-Größe**: Anpassbarer Alignment-Guide (50-300px)
-- **Export-Optionen**: 
-  - Ausgabegrößen: 128x128, 256x256, 512x512, 1024x1024
-  - Komprimierungsqualität einstellbar (50-100%)
-- **Auto-Scaling**: Bilder werden beim Laden automatisch auf Ausgabegröße angepasst
+## 🚀 Quick Start
 
-### 🎨 Color Matching Tab (NEU!)
-- **Referenz-basierte Farbkorrektur**: Passe Bilder an ein Referenzbild an
-- **Live-Vorschau**: 3-Canvas-System (Original, Referenz, Angepasst) mit Echtzeit-Updates
-- **Erweiterte Farbkontrollen**:
-  - Intensität (0-300%): Stärke der Farbanpassung
-  - Sättigung (0-300%): Lebendigkeit der Farben
-  - Helligkeit (30-200%): Gesamthelligkeit
-  - Kontrast (50-200%): Unterschied zwischen hellen und dunklen Bereichen
-  - Farbton-Verschiebung (-180° bis +180°): Farbspektrum-Rotation
-  - Schärfe (0-300%): Bildschärfe und Details
-  - Rauschreduktion (0-100%): Glättung von Bildartefakten
-  - Gamma-Korrektur (0.5-2.0): Tonwert-Anpassung
-- **Batch-Verarbeitung**: Mehrere Bilder gleichzeitig an ein Referenzbild anpassen
-- **Debounced Preview**: Performance-optimierte Vorschau mit 500ms Verzögerung
-- **Reset-Funktion**: Alle Einstellungen auf Standardwerte zurücksetzen
-
-## Installation
-
-1. Dependencies installieren:
+1. **Install dependencies:**
 ```bash
 npm install
 ```
 
-2. TypeScript kompilieren:
+2. **Build the application:**
 ```bash
 npm run build
 ```
 
-3. Server starten:
+3. **Start the server:**
 ```bash
 npm start
 ```
 
-Für die Entwicklung:
+4. **Open your browser:**
+Go to: `http://localhost:3000`
+
+**Development mode** (with hot reload):
 ```bash
 npm run dev
 ```
 
-## Verwendung
+## ✨ Features
 
-1. Browser öffnen: `http://localhost:3000`
-2. Tab auswählen:
-   - **📦 Bulk Verarbeitung**: Für Batch-Bildbearbeitung
-   - **🎨 Layer Editor**: Für Layer-basiertes Compositing
-   - **🎨 Color Matching**: Für referenz-basierte Farbkorrektur
+### 📦 Bulk Processing Tab
+- **Image Splitting**: Split square images into 4 equal parts
+- **Compression**: PNG compression (adjustable quality 50-100%, default: 100%)
+- **Resizing**: Scale images to any target size
+- **Auto-Trim**: Automatically remove transparent areas
+  - Configurable minimal padding (0-50px, default: 2px)  
+  - Adjustable detection tolerance (5-100, default: 100)
+  - **Fixed Target Size after Auto-Trim**: Scale trimmed images to exact dimensions while preserving proportions
+- **Smart Crop**: Intelligent content detection with configurable padding (uniform or individual sides)
+- **Batch Processing**: Process up to 20 images simultaneously
+- **Transparency Preservation**: PNG transparency is maintained throughout all operations
+- **Intelligent Naming**: Prefix + sequential numbering with collision avoidance
 
-### Bulk-Verarbeitung
-1. Bilder per Drag & Drop oder Dateiauswahl hochladen (max. 20)
-2. Modus auswählen:
-   - **Zerlegen**: Teilt Bild in 4 Quadranten
-   - **Größe ändern**: Skaliert auf gewünschte Abmessungen
-   - **Nur komprimieren**: Reduziert Dateigröße ohne Größenänderung
-   - **Zerlegen + Größe**: Kombiniert beide Operationen
-3. Optionen konfigurieren:
-   - Qualität einstellen (50-100%, Standard: 100%)
-   - **Auto-Trim** aktivieren für automatisches Entfernen transparenter Bereiche
-     - Optional: "Feste Zielgröße nach Auto-Trim" für exakte Abmessungen (z.B. 512x512)
-     - Funktioniert in allen Modi (Komprimieren, Zerlegen, etc.)
-   - Smart Crop aktivieren für intelligente Inhaltserkennung
-   - Präfix für Ausgabedateien definieren
-4. "Bilder verarbeiten" klicken
-5. Einzeln oder alle Dateien herunterladen
+### 🎨 Layer Editor Tab
+- **3-Layer System**: Position up to 3 images as layers on top of each other
+- **Live Preview**: Real-time canvas rendering with red alignment guide (50% opacity)
+- **Layer Controls**: 
+  - Visibility toggle
+  - Scaling (0.1x - 3.0x in 0.05 increments)
+  - X/Y Position (-200px to +200px)
+- **Preset System**: Save and load layer configurations (localStorage)
+- **Guide Size**: Adjustable alignment guide (50-300px)
+- **Export Options**: 
+  - Output sizes: 128x128, 256x256, 512x512, 1024x1024
+  - Adjustable compression quality (50-100%)
+- **Auto-Scaling**: Images automatically scale to fit output size when loaded
+
+### 🎨 Color Matching Tab
+- **Reference-based Color Correction**: Match images to a reference image's color characteristics
+- **Live Preview**: 3-canvas system (Original, Reference, Adjusted) with real-time updates
+- **Advanced Color Controls**:
+  - Intensity (0-300%): Strength of color matching
+  - Saturation (0-300%): Color vibrancy
+  - Brightness (30-200%): Overall brightness
+  - Contrast (50-200%): Difference between light and dark areas
+  - Hue Shift (-180° to +180°): Color spectrum rotation
+  - Sharpness (0-300%): Image sharpness and detail
+  - Noise Reduction (0-100%): Smoothing of image artifacts
+  - Gamma Correction (0.5-2.0): Tone curve adjustment
+- **Batch Processing**: Process multiple images with consistent reference matching
+- **Debounced Preview**: Performance-optimized preview with 500ms delay
+- **Reset Function**: Reset all settings to default values
+
+## 📦 Installation
+
+```bash
+# Clone the repository
+git clone [your-repo-url]
+cd img-bulk-tool
+
+# Install dependencies
+npm install
+
+# Build the application
+npm run build
+
+# Start the production server
+npm start
+```
+
+## 🎯 Usage
+
+### Bulk Processing
+
+1. **Upload Images**: Drag & drop or file selection (max. 20 images)
+2. **Select Mode**:
+   - **Split**: Divide image into 4 quadrants
+   - **Resize**: Scale to desired dimensions
+   - **Compress Only**: Reduce file size without resizing
+   - **Split + Resize**: Combine both operations
+3. **Configure Options**:
+   - Set quality (50-100%, default: 100%)
+   - Enable **Auto-Trim** for automatic transparent area removal
+     - Optional: "Fixed Target Size after Auto-Trim" for exact dimensions (e.g., 512x512)
+     - Works in all modes (Compress, Split, etc.)
+   - Enable Smart Crop for intelligent content detection
+   - Define prefix for output files
+4. Click **"Process Images"**
+5. Download individual files or all at once
 
 ### Layer Editor
-1. Bis zu 3 Bilder als Layer hochladen (Drag & Drop oder Klick)
-2. Layer individuell anpassen:
-   - Sichtbarkeit umschalten
-   - Skalierung feinjustieren (0.05er Schritte)
-   - Position anpassen (X/Y-Achse)
-3. Guide-Einstellungen:
-   - Roten Alignment-Guide ein/ausblenden
-   - Guide-Größe anpassen (Slider oder Zahleneingabe)
-4. Presets verwenden:
-   - Konfigurationen speichern/laden
-   - Beispiel-Setup ist vorinstalliert
-5. Export-Einstellungen:
-   - Ausgabegröße wählen (128x128 bis 1024x1024)
-   - Komprimierungsqualität festlegen
-   - Dateiname-Präfix eingeben
-6. "Layer exportieren" klicken
+
+1. Upload up to 3 images as layers (drag & drop or click)
+2. Adjust layers individually:
+   - Toggle visibility
+   - Fine-tune scaling (0.05 increments)
+   - Adjust position (X/Y axis)
+3. Guide settings:
+   - Show/hide red alignment guide
+   - Adjust guide size (slider or number input)
+4. Use presets:
+   - Save/load configurations
+   - Pre-installed example setup available
+5. Export settings:
+   - Choose output size (128x128 to 1024x1024)
+   - Set compression quality
+   - Enter filename prefix
+6. Click **"Export Layers"**
 
 ### Color Matching
-1. **Referenzbild hochladen**: Erstes Bild per Drag & Drop oder Klick hochladen
-   - Dieses Bild bestimmt die Ziel-Farbcharakteristik
-   - Vorschau wird automatisch angezeigt
-2. **Zielbilder hinzufügen**: Bilder, die angepasst werden sollen
-   - Batch-Upload von mehreren Bildern möglich
-   - Einzelne Bilder können entfernt werden
-3. **Live-Vorschau nutzen**: 
-   - 3-Canvas-Ansicht: Original, Referenz, Angepasst
-   - Vorschau aktualisiert sich automatisch bei Änderungen
-4. **Farbkontrollen anpassen**:
-   - **Basis-Einstellungen**: Intensität und Qualität
-   - **Erweiterte Kontrollen**: Sättigung, Helligkeit, Kontrast
-   - **Spezial-Effekte**: Farbton-Verschiebung, Schärfe, Rauschreduktion
-   - **Tonwert**: Gamma-Korrektur für feine Anpassungen
-5. **Reset-Option**: Alle Einstellungen auf Standardwerte zurücksetzen
-6. **Verarbeitung starten**: "🎨 Color Matching starten" klicken
-7. **Ergebnisse herunterladen**: Einzeln oder alle Dateien auf einmal
 
-## 🎯 Auto-Trim mit fester Zielgröße Feature
+1. **Upload Reference Image**: First image to define target color characteristics
+   - Preview is automatically displayed
+2. **Add Target Images**: Images to be adjusted
+   - Batch upload of multiple images supported
+   - Individual images can be removed
+3. **Use Live Preview**: 
+   - 3-canvas view: Original, Reference, Adjusted
+   - Preview updates automatically with changes
+4. **Adjust Color Controls**:
+   - **Basic Settings**: Intensity and Quality
+   - **Advanced Controls**: Saturation, Brightness, Contrast
+   - **Special Effects**: Hue Shift, Sharpness, Noise Reduction
+   - **Tone**: Gamma Correction for fine adjustments
+5. **Reset Option**: Reset all settings to defaults
+6. **Start Processing**: Click "🎨 Start Color Matching"
+7. **Download Results**: Individual files or all at once
 
-Das neue Auto-Trim Feature löst ein häufiges Problem bei der Bildbearbeitung:
+## 🏗️ Architecture
 
-### Problem
-Beim Entfernen transparenter Bereiche (Auto-Trim) entstehen variable Bildgrößen (z.B. 477x500, 823x901), 
-was problematisch ist, wenn einheitliche Abmessungen benötigt werden.
+### Backend (`src/`)
+- **server.ts**: Express server with REST API and static file serving
+- **lib/imageProcessor.ts**: Core image operations (split, resize, Smart Crop with pixel-level analysis)
+- **lib/compressor.ts**: PNG compression using imagemin + pngquant + optipng
+- **lib/fileManager.ts**: File naming with collision avoidance and sequential numbering
+- **lib/colorAnalyzer.ts**: Advanced color analysis and matching engine
 
-### Lösung
-Die Option "Feste Zielgröße nach Auto-Trim" kombiniert drei Schritte:
-1. **Auto-Trim**: Entfernt transparente Bereiche automatisch
-2. **Proportionale Skalierung**: Passt das getrimte Bild in die Zielgröße ein
-3. **Zentrierung**: Platziert den Inhalt mittig im transparenten Canvas
+### Frontend (`public/`)
+- **index.html**: Single-page app with drag & drop interface
+- **js/main.ts**: Application entry point with modular architecture
+- **js/components/**: Reusable UI components (BaseComponent, TabComponent)
+- **js/features/**: Feature modules (BulkProcessor, LayerEditor, ColorMatcher)
+- **js/services/**: Business logic layer (ApiService, FileService)
+- **css/**: Responsive styling with grid layouts
 
-### Anwendungsbeispiele
-- **Icons**: 512x512 App-Icons mit konsistenten Abmessungen
-- **Sprites**: Einheitliche Sprite-Größen für Game-Development
-- **Thumbnails**: Konsistente Vorschaubilder für Galerien
-- **Asset-Bibliotheken**: Standardisierte Bildgrößen für Design-Systeme
+### Key Data Flow
+1. Frontend uploads files via FormData to `/api/process`, `/api/layer-process`, or `/api/color-match`
+2. Backend processes images based on mode-specific logic
+3. Files saved to `output/` with collision-safe naming: `[prefix]_[number].png`
+4. Results returned with download URLs and file metadata
 
-### Workflow
-1. Modus wählen (funktioniert mit allen Modi)
-2. "Auto-Trim" aktivieren
-3. "Feste Zielgröße nach Auto-Trim" aktivieren
-4. Zielgröße eingeben (z.B. 512×512)
-5. Verarbeiten → Ergebnis: Exakte Abmessungen mit zentriertem Inhalt
+## 📁 File Naming
 
-## 🎨 Color Matching Anwendungsfälle
+Output files are named as: `[prefix]_[number].png`
 
-Das Color Matching Feature eignet sich besonders für:
+- Sequential numbering starts from 1
+- Automatic collision avoidance by incrementing
+- No additional identifiers
 
-### Konsistente Bildserien
-- **Produktfotografie**: Einheitlicher Look für E-Commerce-Kataloge
-- **Portfolio-Optimierung**: Harmonische Farbstimmung in Bildergalerien
-- **Social Media**: Konsistentes Branding über mehrere Posts
-- **Event-Fotografie**: Einheitliche Farbkorrektur für ganze Fotoserien
+**Examples:**
+- 1 image split (prefix: "icon"): `icon_1.png`, `icon_2.png`, `icon_3.png`, `icon_4.png`
+- 3 images compressed (prefix: "asset"): `asset_1.png`, `asset_2.png`, `asset_3.png`
 
-### Kreative Anwendungen
-- **Vintage-Look**: Übertragung eines nostalgischen Farbstils
-- **Film-Ästhetik**: Nachahmen von Kinolook und Filmlooks
-- **Künstlerische Effekte**: Experimentelle Farbkombinationen
-- **Mood-Anpassung**: Warme/kalte Farbstimmungen übertragen
+## 🛠️ Scripts
 
-### Technische Korrekturen
-- **Weißabgleich-Korrektur**: Konsistente Farbtemperatur
-- **Lighting-Anpassung**: Ausgleich unterschiedlicher Beleuchtungssituationen
-- **Monitor-Kalibrierung**: Anpassung an Referenz-Standards
-- **Print-Vorbereitung**: Optimierung für spezifische Ausgabemedien
+- `npm run dev`: Development mode (Backend + Frontend watch)
+- `npm run build`: Full build (Backend + Frontend)
+- `npm run build:backend`: Compile backend only
+- `npm run build:frontend`: Compile frontend only  
+- `npm start`: Start production server (requires build)
+- `npm run serve`: Preview built frontend
+- `npm run type-check`: TypeScript type checking without build
 
-## Dateinamen-Schema
-
-Ausgabedateien werden benannt als: `[präfix]_[nummer].png`
-
-- Fortlaufende Nummerierung beginnt bei 1
-- Automatische Kollisionsvermeidung durch Hochzählen
-- Keine zusätzlichen Kennzeichnungen
-
-Beispiele:
-- 1 Bild zerlegen (Präfix: "icon"): `icon_1.png`, `icon_2.png`, `icon_3.png`, `icon_4.png`
-- 3 Bilder komprimieren (Präfix: "asset"): `asset_1.png`, `asset_2.png`, `asset_3.png`
-
-## Technische Details
+## 🔧 Technical Details
 
 - **Backend**: Node.js + Express + TypeScript
-- **Frontend**: Modulares TypeScript + Vite + ES2022 Module
-- **Architektur**: Event-driven, komponentenbasiert, Service Layer Pattern
-- **Bildverarbeitung**: Sharp (schnell und präzise)
-- **Komprimierung**: imagemin + pngquant + optipng
-- **Upload**: Multer für Dateiverarbeitung
-- **TypeScript**: Strict Mode, vollständige Type-Safety
+- **Frontend**: Modular TypeScript + Vite + ES2022 Modules
+- **Architecture**: Event-driven, component-based, Service Layer Pattern
+- **Image Processing**: Sharp.js (fast and precise)
+- **Compression**: imagemin + pngquant + optipng
+- **Upload**: Multer for file processing
+- **TypeScript**: Strict mode, full type safety
 
-## 🏗️ Frontend Architektur (Refactored)
+## 🎯 Use Cases
 
-Das Frontend wurde von einer monolithischen in eine professionelle, modulare Architektur umgebaut:
+### Auto-Trim with Fixed Target Size
+Perfect for creating consistent dimensions:
+- **Icons**: 512x512 app icons with consistent dimensions
+- **Sprites**: Uniform sprite sizes for game development
+- **Thumbnails**: Consistent preview images for galleries
+- **Asset Libraries**: Standardized image sizes for design systems
 
-### Ordnerstruktur
+### Color Matching Applications
+- **Product Photography**: Uniform look for e-commerce catalogs
+- **Portfolio Optimization**: Harmonious color mood in image galleries
+- **Social Media**: Consistent branding across multiple posts
+- **Creative Effects**: Vintage looks, film aesthetics, artistic color combinations
 
-```
-img-bulk-tool/
-├── src/                           # Backend TypeScript
-│   ├── server.ts                  # Express Server
-│   └── lib/                       # Backend Services
-│       ├── imageProcessor.ts      # Bildverarbeitung Logic
-│       ├── compressor.ts          # PNG Komprimierung
-│       └── fileManager.ts        # File-Handling
-├── public/                        # Frontend (Modulares TypeScript)
-│   ├── index.html                 # Single Page App
-│   ├── css/main.css              # Styling
-│   └── js/                        # Modulare Frontend-Architektur
-│       ├── main.ts               # Application Entry Point
-│       ├── components/           # Wiederverwendbare UI-Komponenten
-│       │   ├── BaseComponent.ts  # Abstract Base für alle Komponenten
-│       │   └── TabComponent.ts   # Tab-System Manager
-│       ├── features/             # Feature-Module
-│       │   ├── BulkProcessor.ts  # Bulk-Verarbeitung Feature
-│       │   ├── LayerEditor.ts    # Layer-Editor Feature
-│       │   └── ColorMatcher.ts   # Color Matching Feature
-│       ├── services/             # Business Logic Layer
-│       │   ├── ApiService.ts     # REST API Communication
-│       │   └── FileService.ts    # File-Handling Logic
-│       ├── models/               # TypeScript Interfaces & Types
-│       │   └── index.ts          # Alle Datenstrukturen
-│       └── utils/                # Hilfsfunktionen
-│           └── EventBus.ts       # Event-System für lose Kopplung
-├── dist/                         # Kompilierte Dateien
-├── uploads/                      # Temporäre Uploads  
-└── output/                       # Verarbeitete Bilder
-```
+---
 
-### 🎯 Architektur-Prinzipien
-
-1. **Komponentenbasiert**: Jede UI-Einheit ist eine wiederverwendbare Komponente
-2. **Service Layer**: Business Logic getrennt von UI-Code
-3. **Event-driven**: Lose Kopplung durch Event Bus System
-4. **Single Responsibility**: Jede Klasse hat genau eine Verantwortung
-5. **Dependency Injection**: Services werden injiziert, nicht direkt instantiiert
-6. **Type Safety**: Vollständige TypeScript-Abdeckung mit strict mode
-
-### 🔧 Design Patterns
-
-- **Observer Pattern**: Event Bus für komponentenübergreifende Kommunikation
-- **Factory Pattern**: Service Singletons
-- **Template Method**: BaseComponent mit abstrakte Methoden
-- **Strategy Pattern**: Verschiedene Processing-Modi
-- **Facade Pattern**: Services abstrahieren komplexe API-Calls
-
-## Scripts
-
-- `npm run dev`: Entwicklungsmodus (Backend + Frontend Watch)
-- `npm run build`: Vollständiger Build (Backend + Frontend)
-- `npm run build:backend`: Nur Backend kompilieren
-- `npm run build:frontend`: Nur Frontend kompilieren  
-- `npm run start`: Server starten (benötigt Build)
-- `npm run serve`: Frontend Preview
-- `npm run type-check`: TypeScript Type-Checking ohne Build
+**Performance**: Utilizes Sharp for ultra-fast image processing, progressive compression with imagemin + pngquant, and Vite for optimized frontend builds.

@@ -168,7 +168,7 @@ export class BulkProcessor extends BaseComponent {
 
     eventBus.on('bulk-processing-error', (data) => {
       this.hideProgress();
-      alert('Fehler bei der Bildverarbeitung: ' + (data.payload?.message || 'Unbekannter Fehler'));
+      alert('Image processing error: ' + (data.payload?.message || 'Unknown error'));
     });
   }
 
@@ -578,7 +578,7 @@ export class BulkProcessor extends BaseComponent {
       await this.apiService.downloadAll(files);
     } catch (error) {
       console.error('Error downloading files:', error);
-      alert('Fehler beim Download einiger Dateien');
+      alert('Error downloading some files');
     }
   }
 

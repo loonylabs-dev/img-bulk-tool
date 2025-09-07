@@ -260,7 +260,7 @@ export class LayerEditor extends BaseComponent {
     });
 
     eventBus.on('layer-export-error', (data) => {
-      alert('Fehler beim Layer-Export: ' + (data.payload?.message || 'Unbekannter Fehler'));
+      alert('Layer export error: ' + (data.payload?.message || 'Unknown error'));
     });
   }
 
@@ -327,7 +327,7 @@ export class LayerEditor extends BaseComponent {
       this.renderCanvas();
     } catch (error) {
       console.error('Error loading layer:', error);
-      alert('Fehler beim Laden der Datei');
+      alert('Error loading file');
     }
   }
 
@@ -914,7 +914,7 @@ export class LayerEditor extends BaseComponent {
     });
 
     this.renderCanvas();
-    alert(`Preset "${selectedPresetName}" wurde geladen.`);
+    alert(`Preset "${selectedPresetName}" was loaded.`);
   }
 
   private deletePreset(): void {
@@ -926,7 +926,7 @@ export class LayerEditor extends BaseComponent {
       return;
     }
 
-    if (!confirm(`Preset "${selectedPresetName}" wirklich löschen?`)) {
+    if (!confirm(`Really delete preset "${selectedPresetName}"?`)) {
       return;
     }
 
@@ -1108,7 +1108,7 @@ export class LayerEditor extends BaseComponent {
       await this.apiService.downloadAll(files);
     } catch (error) {
       console.error('Error downloading layer files:', error);
-      alert('Fehler beim Download einiger Layer-Dateien');
+      alert('Error downloading some layer files');
     }
   }
 

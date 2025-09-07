@@ -36,7 +36,7 @@ class Application {
   private setupTabs(): void {
     this.tabComponent.addTab({
       id: 'bulk',
-      label: '📦 Bulk Verarbeitung',
+      label: '📦 Bulk Processing',
       panelId: 'bulk-tab',
       onActivate: () => {
         console.log('Bulk processing tab activated');
@@ -70,7 +70,7 @@ class Application {
     window.addEventListener('error', (event) => {
       console.error('Global error:', event.error);
       eventBus.emit('global-error', { 
-        message: event.error?.message || 'Unbekannter Fehler',
+        message: event.error?.message || 'Unknown error',
         error: event.error 
       });
     });
@@ -107,7 +107,7 @@ class Application {
       eventBus.emit('app-initialized');
     } catch (error) {
       console.error('Failed to initialize application:', error);
-      alert('Fehler beim Initialisieren der Anwendung. Bitte laden Sie die Seite neu.');
+      alert('Error initializing application. Please reload the page.');
     }
   }
 

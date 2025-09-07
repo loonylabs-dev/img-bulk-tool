@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bild-Bearbeitungs-Tool</title>
+    <title>Image Bulk Processing Tool</title>
   <script type="module" src="./js/main.ts"></script>
   <link rel="stylesheet" crossorigin href="/css/main.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🖼️ Bild-Bearbeitungs-Tool</h1>
-            <p>Bilder zerlegen, komprimieren und Größe ändern</p>
+            <h1>🖼️ Image Bulk Processing Tool</h1>
+            <p>Split, compress and resize images</p>
         </header>
 
         <main id="main">
             <!-- Tab Navigation -->
             <nav class="tab-navigation">
-                <button class="tab-btn active" data-tab="bulk">📦 Bulk Verarbeitung</button>
+                <button class="tab-btn active" data-tab="bulk">📦 Bulk Processing</button>
                 <button class="tab-btn" data-tab="layer">🎨 Layer Editor</button>
                 <button class="tab-btn" data-tab="color">🎨 Color Matching</button>
             </nav>
@@ -34,8 +34,8 @@
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
-                        <p>Bilder hier ablegen oder klicken zum Auswählen</p>
-                        <p class="hint">Bis zu 20 Bilder gleichzeitig (PNG, JPG, GIF, WebP)</p>
+                        <p>Drop images here or click to select</p>
+                        <p class="hint">Up to 20 images at once (PNG, JPG, GIF, WebP)</p>
                         <input type="file" id="fileInput" multiple accept="image/*" hidden>
                     </div>
                 </div>
@@ -44,118 +44,118 @@
             </section>
 
             <section class="options-section">
-                <h2>Bearbeitungsoptionen</h2>
+                <h2>Processing Options</h2>
                 
                 <div class="option-group">
-                    <label>Modus:</label>
+                    <label>Mode:</label>
                     <div class="radio-group">
                         <label class="radio-label">
                             <input type="radio" name="mode" value="resize" checked>
-                            <span>📐 Größe ändern</span>
+                            <span>📐 Resize</span>
                         </label>
                         <label class="radio-label">
                             <input type="radio" name="mode" value="compress">
-                            <span>🗜️ Nur komprimieren</span>
+                            <span>🗜️ Compress Only</span>
                         </label>
                         <label class="radio-label">
                             <input type="radio" name="mode" value="split">
-                            <span>✂️ Zerlegen (4 Teile)</span>
+                            <span>✂️ Split (4 parts)</span>
                         </label>
                         <label class="radio-label">
                             <input type="radio" name="mode" value="split-resize">
-                            <span>✂️📐 Zerlegen + Größe</span>
+                            <span>✂️📐 Split + Resize</span>
                         </label>
                     </div>
                 </div>
 
                 <div class="option-group">
-                    <label for="quality">Komprimierungsqualität:</label>
+                    <label for="quality">Compression Quality:</label>
                     <div class="slider-container">
                         <input type="range" id="quality" min="50" max="100" value="100">
                         <span id="qualityValue">100%</span>
                     </div>
                     <div class="quality-hints">
-                        <span>Klein</span>
+                        <span>Small</span>
                         <span>Optimal</span>
-                        <span>Hoch</span>
+                        <span>High</span>
                     </div>
                 </div>
 
                 <div id="sizeOptions" class="option-group" style="display: none;">
-                    <label>Zielgröße (Pixel):</label>
+                    <label>Target Size (Pixels):</label>
                     <div class="size-inputs">
-                        <input type="number" id="width" placeholder="Breite" value="512" min="16" max="4096">
-                        <button type="button" id="aspectRatioLock" class="ratio-lock-btn locked" title="Seitenverhältnis sperren">
+                        <input type="number" id="width" placeholder="Width" value="512" min="16" max="4096">
+                        <button type="button" id="aspectRatioLock" class="ratio-lock-btn locked" title="Lock aspect ratio">
                             🔒
                         </button>
-                        <input type="number" id="height" placeholder="Höhe" value="512" min="16" max="4096">
+                        <input type="number" id="height" placeholder="Height" value="512" min="16" max="4096">
                     </div>
                 </div>
 
                 <div class="option-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="autoTrim">
-                        <span>✂️ Auto-Trim (Transparenz entfernen)</span>
+                        <span>✂️ Auto-Trim (Remove Transparency)</span>
                     </label>
-                    <p class="hint">Entfernt automatisch transparente Ränder und behält nur den sichtbaren Inhalt</p>
+                    <p class="hint">Automatically removes transparent borders and keeps only visible content</p>
                 </div>
 
                 <div id="autoTrimOptions" class="option-group" style="display: none;">
-                    <label for="autoTrimPadding">Minimaler Abstand (Pixel):</label>
+                    <label for="autoTrimPadding">Minimal Padding (Pixels):</label>
                     <div class="slider-container">
                         <input type="range" id="autoTrimPadding" min="0" max="50" value="2">
                         <span id="autoTrimPaddingValue">2px</span>
                     </div>
-                    <p class="hint">Fügt einen kleinen Abstand um den sichtbaren Inhalt hinzu</p>
+                    <p class="hint">Adds a small padding around visible content</p>
                     
-                    <label for="autoTrimTolerance">Erkennungstoleranz:</label>
+                    <label for="autoTrimTolerance">Detection Tolerance:</label>
                     <div class="slider-container">
                         <input type="range" id="autoTrimTolerance" min="5" max="100" value="100">
                         <span id="autoTrimToleranceValue">100</span>
                     </div>
-                    <p class="hint">Höhere Werte = weniger empfindlich bei der Content-Erkennung</p>
+                    <p class="hint">Higher values = less sensitive content detection</p>
 
                     <div class="option-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="autoTrimFixedSize">
-                            <span>🎯 Feste Zielgröße nach Auto-Trim</span>
+                            <span>🎯 Fixed Target Size after Auto-Trim</span>
                         </label>
-                        <p class="hint">Skaliert das getrimte Bild auf eine feste Größe unter Beibehaltung der Proportionen</p>
+                        <p class="hint">Scales trimmed image to fixed size while preserving proportions</p>
                     </div>
 
                     <div id="autoTrimSizeOptions" class="option-group" style="display: none;">
-                        <label>Zielgröße nach Auto-Trim (Pixel):</label>
+                        <label>Target Size after Auto-Trim (Pixels):</label>
                         <div class="size-inputs">
-                            <input type="number" id="autoTrimTargetWidth" placeholder="Breite" value="512" min="16" max="4096">
+                            <input type="number" id="autoTrimTargetWidth" placeholder="Width" value="512" min="16" max="4096">
                             <span>×</span>
-                            <input type="number" id="autoTrimTargetHeight" placeholder="Höhe" value="512" min="16" max="4096">
+                            <input type="number" id="autoTrimTargetHeight" placeholder="Height" value="512" min="16" max="4096">
                         </div>
-                        <p class="hint">Das getrimte Bild wird proportional skaliert und zentriert in dieser Größe</p>
+                        <p class="hint">Trimmed image will be proportionally scaled and centered in this size</p>
                     </div>
                 </div>
 
                 <div class="option-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="smartCrop">
-                        <span>🎯 Intelligentes Zentrieren (Smart Crop)</span>
+                        <span>🎯 Smart Centering (Smart Crop)</span>
                     </label>
-                    <p class="hint">Erkennt automatisch den Bildinhalt und zentriert ihn mit gleichmäßigem Abstand</p>
+                    <p class="hint">Automatically detects image content and centers it with uniform padding</p>
                 </div>
 
                 <div id="cropOptions" class="option-group" style="display: none;">
                     <div class="crop-mode-selection">
                         <label class="radio-label small">
                             <input type="radio" name="cropMode" value="uniform" checked>
-                            <span>📐 Gleichmäßiger Abstand</span>
+                            <span>📐 Uniform Padding</span>
                         </label>
                         <label class="radio-label small">
                             <input type="radio" name="cropMode" value="individual">
-                            <span>🎯 Individuelle Seiten</span>
+                            <span>🎯 Individual Sides</span>
                         </label>
                     </div>
 
                     <div id="uniformCropSettings">
-                        <label for="cropPadding">Abstand um Inhalt (Pixel):</label>
+                        <label for="cropPadding">Padding around Content (Pixels):</label>
                         <div class="slider-container">
                             <input type="range" id="cropPadding" min="0" max="100" value="20">
                             <span id="paddingValue">20px</span>
@@ -163,63 +163,63 @@
                     </div>
 
                     <div id="individualCropSettings" style="display: none;">
-                        <label>Individuelle Seitenabstände (Pixel):</label>
+                        <label>Individual Side Padding (Pixels):</label>
                         <div class="padding-grid">
                             <div class="padding-input-group">
-                                <label for="cropPaddingTop">🔺 Oben:</label>
+                                <label for="cropPaddingTop">🔺 Top:</label>
                                 <input type="number" id="cropPaddingTop" min="0" max="200" value="20" placeholder="20">
                             </div>
                             <div class="padding-input-group">
-                                <label for="cropPaddingRight">▶️ Rechts:</label>
+                                <label for="cropPaddingRight">▶️ Right:</label>
                                 <input type="number" id="cropPaddingRight" min="0" max="200" value="20" placeholder="20">
                             </div>
                             <div class="padding-input-group">
-                                <label for="cropPaddingBottom">🔻 Unten:</label>
+                                <label for="cropPaddingBottom">🔻 Bottom:</label>
                                 <input type="number" id="cropPaddingBottom" min="0" max="200" value="20" placeholder="20">
                             </div>
                             <div class="padding-input-group">
-                                <label for="cropPaddingLeft">◀️ Links:</label>
+                                <label for="cropPaddingLeft">◀️ Left:</label>
                                 <input type="number" id="cropPaddingLeft" min="0" max="200" value="20" placeholder="20">
                             </div>
                         </div>
                     </div>
                     
-                    <label for="cropTolerance">Transparenz-Schwelle:</label>
+                    <label for="cropTolerance">Transparency Threshold:</label>
                     <div class="slider-container">
                         <input type="range" id="cropTolerance" min="1" max="50" value="10">
                         <span id="toleranceValue">10</span>
                     </div>
-                    <p class="hint">Niedrigere Werte = strengere Transparenz-Erkennung</p>
+                    <p class="hint">Lower values = stricter transparency detection</p>
                 </div>
 
                 <div class="option-group">
-                    <label>Globales Präfix (optional):</label>
-                    <input type="text" id="globalPrefix" placeholder="z.B. icon, tile, asset">
+                    <label>Global Prefix (optional):</label>
+                    <input type="text" id="globalPrefix" placeholder="e.g. icon, tile, asset">
                     <label class="checkbox-label">
                         <input type="checkbox" id="combineWithOriginalName">
-                        <span>Mit Originalnamen kombinieren (z.B. item_icon_horse)</span>
+                        <span>Combine with original names (e.g. item_icon_horse)</span>
                     </label>
                     <label class="checkbox-label">
                         <input type="checkbox" id="useSequentialNumbering">
-                        <span>Fortlaufende Nummerierung verwenden (z.B. _1, _2, _3)</span>
+                        <span>Use sequential numbering (e.g. _1, _2, _3)</span>
                     </label>
                     <label class="checkbox-label">
                         <input type="checkbox" id="useOriginalFileNames" checked>
-                        <span>Originalnamen 1:1 verwenden (überschreibt bestehende Dateien)</span>
+                        <span>Use original filenames 1:1 (overwrites existing files)</span>
                     </label>
-                    <p class="hint">Wird für alle Bilder verwendet, wenn kein individuelles Präfix gesetzt ist</p>
+                    <p class="hint">Used for all images when no individual prefix is set</p>
                 </div>
 
                 <button id="processBtn" class="process-btn" disabled>
-                    <span>🚀 Bilder verarbeiten</span>
+                    <span>🚀 Process Images</span>
                 </button>
             </section>
 
             <section id="results" class="results-section" style="display: none;">
-                <h2>Ergebnisse</h2>
+                <h2>Results</h2>
                 <div id="resultsList" class="results-list"></div>
                 <button id="downloadAllBtn" class="download-all-btn">
-                    <span>📥 Alle herunterladen</span>
+                    <span>📥 Download All</span>
                 </button>
                     </section>
                 </div>
@@ -228,7 +228,7 @@
                 <div class="tab-panel" id="layer-tab">
                     <section class="layer-editor-section">
                         <h2>Layer Editor</h2>
-                        <p>Lade bis zu 3 Bilder als Layer hoch und richte sie präzise aus.</p>
+                        <p>Upload up to 3 images as layers and align them precisely.</p>
                         
                         <div class="layer-upload-area">
                             <div class="layer-slots">
@@ -275,7 +275,7 @@
                             <!-- Left Column: Canvas Preview + Presets -->
                             <div class="left-column">
                                 <div class="canvas-preview-area">
-                                    <h3>Vorschau</h3>
+                                    <h3>Preview</h3>
                                     <div class="canvas-container">
                                         <canvas id="layerCanvas" width="400" height="400"></canvas>
                                         <div class="canvas-controls">
@@ -283,10 +283,10 @@
                                                 <h4>Guide 1 (Rot)</h4>
                                                 <label>
                                                     <input type="checkbox" id="showGuide" checked> 
-                                                    Anzeigen
+                                                    Show
                                                 </label>
                                                 <label>
-                                                    Größe: 
+                                                    Size: 
                                                     <input type="range" id="guideSize" min="50" max="300" value="200">
                                                     <input type="number" id="guideSizeInput" min="50" max="300" value="200">
                                                     <span>px</span>
@@ -296,10 +296,10 @@
                                                 <h4>Guide 2 (Grün)</h4>
                                                 <label>
                                                     <input type="checkbox" id="showSecondGuide" checked> 
-                                                    Anzeigen
+                                                    Show
                                                 </label>
                                                 <label>
-                                                    Größe: 
+                                                    Size: 
                                                     <input type="range" id="secondGuideSize" min="50" max="400" value="250">
                                                     <input type="number" id="secondGuideSizeInput" min="50" max="400" value="250">
                                                     <span>px</span>
@@ -315,14 +315,14 @@
                                     <div class="preset-controls">
                                         <div class="preset-buttons">
                                             <select id="presetSelect">
-                                                <option value="">-- Preset wählen --</option>
+                                                <option value="">-- Choose Preset --</option>
                                             </select>
-                                            <button id="loadPreset" class="preset-btn">📋 Laden</button>
-                                            <button id="savePreset" class="preset-btn">💾 Speichern</button>
-                                            <button id="deletePreset" class="preset-btn delete">🗑️ Löschen</button>
+                                            <button id="loadPreset" class="preset-btn">📋 Load</button>
+                                            <button id="savePreset" class="preset-btn">💾 Save</button>
+                                            <button id="deletePreset" class="preset-btn delete">🗑️ Delete</button>
                                         </div>
                                         <div class="preset-input">
-                                            <input type="text" id="presetName" placeholder="Preset-Name eingeben...">
+                                            <input type="text" id="presetName" placeholder="Enter preset name...">
                                         </div>
                                     </div>
                                 </div>
@@ -332,7 +332,7 @@
                             <div class="layer-controls-column">
                                 <!-- Layer Controls -->
                                 <div class="layer-controls">
-                                    <h3>Layer-Einstellungen</h3>
+                                    <h3>Layer Settings</h3>
                                     <div class="layer-control-panels-vertical">
                                         <div class="layer-control-panel" id="layerControl0">
                                             <div class="layer-header">
@@ -350,11 +350,11 @@
                                                 <div class="layer-quick-controls">
                                                     <label class="quick-control">
                                                         <input type="checkbox" id="layerVisible0" checked>
-                                                        <span>Sichtbar</span>
+                                                        <span>Visible</span>
                                                     </label>
                                                     <label class="quick-control">
                                                         <input type="checkbox" id="layerCropEnabled0">
-                                                        <span>Zuschnitt</span>
+                                                        <span>Crop</span>
                                                     </label>
                                                 </div>
                                             </div>
@@ -362,7 +362,7 @@
                                                 <!-- Left column: Existing controls -->
                                                 <div class="layer-control-column">
                                                     <div class="control-group">
-                                                        <label>Skalierung:</label>
+                                                        <label>Scale:</label>
                                                         <input type="range" id="layerScale0" min="0.1" max="3" step="0.01" value="1">
                                                         <input type="number" id="layerScaleInput0" class="layer-number-input" min="0.1" max="3" step="0.01" value="1.00">
                                                     </div>
@@ -390,12 +390,12 @@
                                                         <input type="number" id="layerCropYInput0" class="layer-number-input" min="0" max="90" step="1" value="0" disabled>
                                                     </div>
                                                     <div class="control-group">
-                                                        <label>Breite:</label>
+                                                        <label>Width:</label>
                                                         <input type="range" id="layerCropWidth0" min="10" max="100" value="100" disabled>
                                                         <input type="number" id="layerCropWidthInput0" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
                                                     </div>
                                                     <div class="control-group">
-                                                        <label>Höhe:</label>
+                                                        <label>Height:</label>
                                                         <input type="range" id="layerCropHeight0" min="10" max="100" value="100" disabled>
                                                         <input type="number" id="layerCropHeightInput0" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
                                                     </div>
@@ -419,11 +419,11 @@
                                                 <div class="layer-quick-controls">
                                                     <label class="quick-control">
                                                         <input type="checkbox" id="layerVisible1" checked>
-                                                        <span>Sichtbar</span>
+                                                        <span>Visible</span>
                                                     </label>
                                                     <label class="quick-control">
                                                         <input type="checkbox" id="layerCropEnabled1">
-                                                        <span>Zuschnitt</span>
+                                                        <span>Crop</span>
                                                     </label>
                                                 </div>
                                             </div>
@@ -431,7 +431,7 @@
                                                 <!-- Left column: Existing controls -->
                                                 <div class="layer-control-column">
                                                     <div class="control-group">
-                                                        <label>Skalierung:</label>
+                                                        <label>Scale:</label>
                                                         <input type="range" id="layerScale1" min="0.1" max="3" step="0.02" value="1">
                                                         <input type="number" id="layerScaleInput1" class="layer-number-input" min="0.1" max="3" step="0.01" value="1.00">
                                                     </div>
@@ -459,12 +459,12 @@
                                                         <input type="number" id="layerCropYInput1" class="layer-number-input" min="0" max="90" step="1" value="0" disabled>
                                                     </div>
                                                     <div class="control-group">
-                                                        <label>Breite:</label>
+                                                        <label>Width:</label>
                                                         <input type="range" id="layerCropWidth1" min="10" max="100" value="100" disabled>
                                                         <input type="number" id="layerCropWidthInput1" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
                                                     </div>
                                                     <div class="control-group">
-                                                        <label>Höhe:</label>
+                                                        <label>Height:</label>
                                                         <input type="range" id="layerCropHeight1" min="10" max="100" value="100" disabled>
                                                         <input type="number" id="layerCropHeightInput1" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
                                                     </div>
@@ -488,11 +488,11 @@
                                                 <div class="layer-quick-controls">
                                                     <label class="quick-control">
                                                         <input type="checkbox" id="layerVisible2" checked>
-                                                        <span>Sichtbar</span>
+                                                        <span>Visible</span>
                                                     </label>
                                                     <label class="quick-control">
                                                         <input type="checkbox" id="layerCropEnabled2">
-                                                        <span>Zuschnitt</span>
+                                                        <span>Crop</span>
                                                     </label>
                                                 </div>
                                             </div>
@@ -500,7 +500,7 @@
                                                 <!-- Left column: Existing controls -->
                                                 <div class="layer-control-column">
                                                     <div class="control-group">
-                                                        <label>Skalierung:</label>
+                                                        <label>Scale:</label>
                                                         <input type="range" id="layerScale2" min="0.1" max="3" step="0.02" value="1">
                                                         <input type="number" id="layerScaleInput2" class="layer-number-input" min="0.1" max="3" step="0.01" value="1.00">
                                                     </div>
@@ -528,12 +528,12 @@
                                                         <input type="number" id="layerCropYInput2" class="layer-number-input" min="0" max="90" step="1" value="0" disabled>
                                                     </div>
                                                     <div class="control-group">
-                                                        <label>Breite:</label>
+                                                        <label>Width:</label>
                                                         <input type="range" id="layerCropWidth2" min="10" max="100" value="100" disabled>
                                                         <input type="number" id="layerCropWidthInput2" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
                                                     </div>
                                                     <div class="control-group">
-                                                        <label>Höhe:</label>
+                                                        <label>Height:</label>
                                                         <input type="range" id="layerCropHeight2" min="10" max="100" value="100" disabled>
                                                         <input type="number" id="layerCropHeightInput2" class="layer-number-input" min="10" max="100" step="1" value="100" disabled>
                                                     </div>
@@ -547,10 +547,10 @@
 
                         <!-- Export Settings -->
                         <div class="layer-export-settings">
-                            <h3>Export-Einstellungen</h3>
+                            <h3>Export Settings</h3>
                             <div class="export-controls">
                                 <div class="control-group">
-                                    <label for="outputSize">Ausgabegröße:</label>
+                                    <label for="outputSize">Output Size:</label>
                                     <select id="outputSize">
                                         <option value="128">128x128</option>
                                         <option value="256">256x256</option>
@@ -559,31 +559,31 @@
                                     </select>
                                 </div>
                                 <div class="control-group">
-                                    <label for="layerQuality">Komprimierungsqualität:</label>
+                                    <label for="layerQuality">Compression Quality:</label>
                                     <div class="slider-container">
                                         <input type="range" id="layerQuality" min="50" max="100" value="100">
                                         <span id="layerQualityValue">100%</span>
                                     </div>
                                 </div>
                                 <div class="control-group">
-                                    <label for="layerPrefix">Dateiname-Präfix:</label>
+                                    <label for="layerPrefix">Filename Prefix:</label>
                                     <input type="text" id="layerPrefix" placeholder="layer" value="layer">
                                 </div>
                                 <div class="control-group">
                                     <label>
                                         <input type="checkbox" id="useOriginalNames" checked>
-                                        Originalnamen verwenden (überschreibt bestehende Dateien)
+                                        Use original filenames (overwrites existing files)
                                     </label>
                                 </div>
                                 <button id="exportLayers" class="export-btn" disabled>
-                                    🚀 Layer exportieren
+                                    🚀 Export Layers
                                 </button>
                             </div>
                         </div>
 
                         <!-- Export Results -->
                         <div id="layerResults" class="layer-results-section" style="display: none;">
-                            <h3>Export-Ergebnisse</h3>
+                            <h3>Export Results</h3>
                             <div id="layerResultsList" class="results-list"></div>
                             <button id="downloadAllLayersBtn" class="download-all-btn">
                                 <span>📥 Alle herunterladen</span>
@@ -596,12 +596,12 @@
                 <div class="tab-panel" id="color-tab">
                     <section class="color-matching-section">
                         <h2>🎨 Color Matching</h2>
-                        <p>Lade ein Referenzbild hoch und passe andere Bilder an dessen Farbcharakteristik an.</p>
+                        <p>Upload a reference image and adjust other images to match its color characteristics.</p>
 
                         <div class="color-matching-layout">
                             <!-- Reference Image Upload -->
                             <div class="reference-section">
-                                <h3>📸 Referenzbild</h3>
+                                <h3>📸 Reference Image</h3>
                                 <div id="referenceDropZone" class="drop-zone reference-drop-zone">
                                     <div class="drop-zone-content">
                                         <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -609,7 +609,7 @@
                                             <polyline points="17 8 12 3 7 8"></polyline>
                                             <line x1="12" y1="3" x2="12" y2="15"></line>
                                         </svg>
-                                        <p>Referenzbild hier ablegen oder klicken zum Auswählen</p>
+                                        <p>Drop reference image here or click to select</p>
                                         <input type="file" id="referenceFileInput" accept="image/*" style="display: none;">
                                     </div>
                                 </div>
@@ -621,7 +621,7 @@
 
                             <!-- Bulk Images Upload -->
                             <div class="bulk-section">
-                                <h3>🖼️ Bilder für Anpassung</h3>
+                                <h3>🖼️ Images for Adjustment</h3>
                                 <div id="colorBulkDropZone" class="drop-zone">
                                     <div class="drop-zone-content">
                                         <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -629,8 +629,8 @@
                                             <polyline points="17 8 12 3 7 8"></polyline>
                                             <line x1="12" y1="3" x2="12" y2="15"></line>
                                         </svg>
-                                        <h3>Bilder hier ablegen</h3>
-                                        <p>oder <button id="colorBulkFileBtn" class="file-btn">durchsuchen</button></p>
+                                        <h3>Drop images here</h3>
+                                        <p>or <button id="colorBulkFileBtn" class="file-btn">browse</button></p>
                                         <input type="file" id="colorBulkFileInput" accept="image/*" multiple style="display: none;">
                                     </div>
                                 </div>
@@ -639,18 +639,18 @@
 
                             <!-- Preview and Controls -->
                             <div class="preview-section" id="colorPreviewSection" style="display: none;">
-                                <h3>👁️ Vorschau</h3>
+                                <h3>👁️ Preview</h3>
                                 <div class="preview-comparison-triple">
                                     <div class="preview-item-triple">
                                         <h4>Original</h4>
                                         <canvas id="originalCanvas" width="560" height="560"></canvas>
                                     </div>
                                     <div class="preview-item-triple">
-                                        <h4>Referenz</h4>
+                                        <h4>Reference</h4>
                                         <canvas id="referenceCanvas" width="560" height="560"></canvas>
                                     </div>
                                     <div class="preview-item-triple">
-                                        <h4>Angepasst</h4>
+                                        <h4>Adjusted</h4>
                                         <canvas id="adjustedCanvas" width="560" height="560"></canvas>
                                     </div>
                                 </div>
@@ -658,30 +658,30 @@
                                 <div class="color-controls-grid">
                                     <!-- Spalte 1: Basis & Farben -->
                                     <div class="control-section">
-                                        <h4>🎨 Farbanpassung</h4>
+                                        <h4>🎨 Color Adjustment</h4>
                                         <div class="control-group">
-                                            <label for="colorIntensity">Gesamtintensität:</label>
+                                            <label for="colorIntensity">Overall Intensity:</label>
                                             <div class="slider-container">
                                                 <input type="range" id="colorIntensity" min="0" max="300" value="100" step="5">
                                                 <span id="colorIntensityValue">100%</span>
                                             </div>
                                         </div>
                                         <div class="control-group">
-                                            <label for="saturationBoost">Sättigung:</label>
+                                            <label for="saturationBoost">Saturation:</label>
                                             <div class="slider-container">
                                                 <input type="range" id="saturationBoost" min="0" max="300" value="100" step="5">
                                                 <span id="saturationBoostValue">100%</span>
                                             </div>
                                         </div>
                                         <div class="control-group">
-                                            <label for="brightnessBoost">Helligkeit:</label>
+                                            <label for="brightnessBoost">Brightness:</label>
                                             <div class="slider-container">
                                                 <input type="range" id="brightnessBoost" min="30" max="200" value="100" step="5">
                                                 <span id="brightnessBoostValue">100%</span>
                                             </div>
                                         </div>
                                         <div class="control-group">
-                                            <label for="hueShift">Farbton-Verschiebung:</label>
+                                            <label for="hueShift">Hue Shift:</label>
                                             <div class="slider-container">
                                                 <input type="range" id="hueShift" min="-180" max="180" value="0" step="5">
                                                 <span id="hueShiftValue">0°</span>
@@ -691,30 +691,30 @@
 
                                     <!-- Spalte 2: Bildqualität -->
                                     <div class="control-section">
-                                        <h4>✨ Bildqualität</h4>
+                                        <h4>✨ Image Quality</h4>
                                         <div class="control-group">
-                                            <label for="contrastBoost">Kontrast:</label>
+                                            <label for="contrastBoost">Contrast:</label>
                                             <div class="slider-container">
                                                 <input type="range" id="contrastBoost" min="50" max="200" value="100" step="5">
                                                 <span id="contrastBoostValue">100%</span>
                                             </div>
                                         </div>
                                         <div class="control-group">
-                                            <label for="sharpness">Schärfe:</label>
+                                            <label for="sharpness">Sharpness:</label>
                                             <div class="slider-container">
                                                 <input type="range" id="sharpness" min="0" max="300" value="100" step="10">
                                                 <span id="sharpnessValue">100%</span>
                                             </div>
                                         </div>
                                         <div class="control-group">
-                                            <label for="gamma">Gamma-Korrektur:</label>
+                                            <label for="gamma">Gamma Correction:</label>
                                             <div class="slider-container">
                                                 <input type="range" id="gamma" min="50" max="200" value="100" step="5">
                                                 <span id="gammaValue">1.0</span>
                                             </div>
                                         </div>
                                         <div class="control-group">
-                                            <label for="noiseReduction">Rauschentfernung:</label>
+                                            <label for="noiseReduction">Noise Reduction:</label>
                                             <div class="slider-container">
                                                 <input type="range" id="noiseReduction" min="0" max="100" value="0" step="5">
                                                 <span id="noiseReductionValue">0%</span>
@@ -724,37 +724,37 @@
 
                                     <!-- Spalte 3: Ausgabe & Aktionen -->
                                     <div class="control-section">
-                                        <h4>📋 Ausgabe & Aktionen</h4>
+                                        <h4>📋 Output & Actions</h4>
                                         <div class="control-group">
-                                            <label for="colorQuality">Ausgabequalität:</label>
+                                            <label for="colorQuality">Output Quality:</label>
                                             <div class="slider-container">
                                                 <input type="range" id="colorQuality" min="50" max="100" value="100">
                                                 <span id="colorQualityValue">100%</span>
                                             </div>
                                         </div>
                                         <div class="control-group">
-                                            <button id="resetControls" class="reset-btn">🔄 Zurücksetzen</button>
+                                            <button id="resetControls" class="reset-btn">🔄 Reset</button>
                                         </div>
                                         <div class="control-group">
                                             <div class="hint-box">
-                                                <p><strong>💡 Tipps:</strong></p>
-                                                <p>• Gesamtintensität zuerst anpassen</p>
-                                                <p>• Sättigung für lebendige Farben</p>
-                                                <p>• Kontrast für mehr Dynamik</p>
-                                                <p>• Schärfe vorsichtig dosieren</p>
+                                                <p><strong>💡 Tips:</strong></p>
+                                                <p>• Adjust overall intensity first</p>
+                                                <p>• Saturation for vibrant colors</p>
+                                                <p>• Contrast for more dynamics</p>
+                                                <p>• Use sharpness carefully</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <button id="processColorBtn" class="process-btn" disabled>
-                                    <span>🎨 Color Matching starten</span>
+                                    <span>🎨 Start Color Matching</span>
                                 </button>
                             </div>
 
                             <!-- Results -->
                             <div id="colorResults" class="results-section" style="display: none;">
-                                <h3>Ergebnisse</h3>
+                                <h3>Results</h3>
                                 <div id="colorResultsList" class="results-list"></div>
                                 <button id="downloadAllColorBtn" class="download-all-btn">
                                     <span>📥 Alle herunterladen</span>
@@ -768,7 +768,7 @@
 
         <div id="progressOverlay" class="progress-overlay" style="display: none;">
             <div class="progress-modal">
-                <h3>Verarbeite Bilder...</h3>
+                <h3>Processing Images...</h3>
                 <div class="progress-bar">
                     <div id="progressFill" class="progress-fill"></div>
                 </div>

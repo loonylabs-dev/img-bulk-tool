@@ -22,3 +22,12 @@ coverage/
 *.swp
 *.swo
 *~
+
+# Development files
+CLAUDE.md
+.claude/
+package-lock.json
+
+# Backup files  
+*.backup
+*.tmp

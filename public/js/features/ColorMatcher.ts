@@ -193,7 +193,7 @@ export class ColorMatcher extends BaseComponent {
 
     eventBus.on('color-processing-error', (data) => {
       this.hideProgress();
-      alert('Fehler beim Color Matching: ' + (data.payload?.message || 'Unbekannter Fehler'));
+      alert('Color matching error: ' + (data.payload?.message || 'Unknown error'));
     });
   }
 
@@ -233,18 +233,18 @@ export class ColorMatcher extends BaseComponent {
     try {
       const { valid, invalid } = await this.fileService.validateFiles([file]);
       if (invalid.length > 0 && invalid[0]) {
-        alert(`Ungültige Datei: ${invalid[0].name} ist kein unterstütztes Bildformat`);
+        alert(`Invalid file: ${invalid[0].name} is not a supported image format`);
         return;
       }
 
       if (valid.length === 0) {
-        alert('Keine gültigen Bilder gefunden');
+        alert('No valid images found');
         return;
       }
 
       const validFile = valid[0];
       if (!validFile) {
-        alert('Fehler beim Laden der Datei');
+        alert('Error loading file');
         return;
       }
 
@@ -263,7 +263,7 @@ export class ColorMatcher extends BaseComponent {
       this.updateUI();
     } catch (error) {
       console.error('Error setting reference image:', error);
-      alert('Fehler beim Laden des Referenzbildes');
+      alert('Error loading reference image');
     }
   }
 
@@ -681,7 +681,7 @@ export class ColorMatcher extends BaseComponent {
     this.resultsList.innerHTML = `
       <div class="results-header">
         <h3>🎨 Color Matching Ergebnisse (${results.length} Bilder)</h3>
-        <p>Alle bearbeiteten Bilder wurden erfolgreich erstellt.</p>
+        <p>All processed images were successfully created.</p>
       </div>
       <div class="results-grid">
         ${resultItems.join('')}
@@ -690,7 +690,7 @@ export class ColorMatcher extends BaseComponent {
 
     // Enable download all button
     this.downloadAllBtn.disabled = false;
-    this.downloadAllBtn.textContent = `📥 Alle herunterladen (${results.length})`;
+    this.downloadAllBtn.textContent = `📥 Download All (${results.length})`;
   }
 
   private async createResultThumbnail(url: string, filename: string): Promise<string> {
@@ -775,7 +775,7 @@ export class ColorMatcher extends BaseComponent {
     const downloadLinks = this.resultsList.querySelectorAll('.download-btn');
     
     if (downloadLinks.length === 0) {
-      alert('Keine Dateien zum Download verfügbar');
+      alert('No files available for download');
       return;
     }
 
@@ -794,7 +794,7 @@ export class ColorMatcher extends BaseComponent {
       console.log('All downloads completed');
     } catch (error) {
       console.error('Error downloading files:', error);
-      alert('Fehler beim Download der Dateien');
+      alert('Error downloading files');
     }
   }
 

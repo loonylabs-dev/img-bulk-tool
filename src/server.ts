@@ -24,7 +24,7 @@ const upload = multer({
     if (mimetype && extname) {
       return cb(null, true);
     } else {
-      return cb(new Error('Nur Bilddateien sind erlaubt!'));
+      return cb(new Error('Only image files are allowed!'));
     }
   }
 });
@@ -90,7 +90,7 @@ app.post('/api/process', upload.array('images', 200), async (req: Request, res: 
     const options: ProcessOptions[] = JSON.parse(req.body.options);
     
     if (!files || files.length === 0) {
-      return res.status(400).json({ error: 'Keine Bilder hochgeladen' });
+      return res.status(400).json({ error: 'No images uploaded' });
     }
 
     const results = [];
@@ -315,8 +315,8 @@ app.post('/api/process', upload.array('images', 200), async (req: Request, res: 
 
     res.json({ success: true, results });
   } catch (error) {
-    console.error('Fehler bei der Verarbeitung:', error);
-    res.status(500).json({ error: 'Fehler bei der Bildverarbeitung' });
+    console.error('Processing error:', error);
+    res.status(500).json({ error: 'Image processing error' });
   }
 });
 
@@ -327,7 +327,7 @@ app.post('/api/layer-process', upload.array('layers', 3), async (req: Request, r
     const options: LayerProcessOptions = JSON.parse(req.body.options);
     
     if (!files || files.length === 0) {
-      return res.status(400).json({ error: 'Keine Layer-Bilder hochgeladen' });
+      return res.status(400).json({ error: 'No layer images uploaded' });
     }
 
     const results = [];
@@ -374,8 +374,8 @@ app.post('/api/layer-process', upload.array('layers', 3), async (req: Request, r
 
     res.json({ success: true, results });
   } catch (error) {
-    console.error('Fehler bei der Layer-Verarbeitung:', error);
-    res.status(500).json({ error: 'Fehler bei der Layer-Verarbeitung' });
+    console.error('Layer processing error:', error);
+    res.status(500).json({ error: 'Layer processing error' });
   }
 });
 
@@ -386,7 +386,7 @@ app.get('/api/download/:filename', (req: Request, res: Response) => {
   if (fs.existsSync(filepath)) {
     res.download(filepath);
   } else {
-    res.status(404).json({ error: 'Datei nicht gefunden' });
+    res.status(404).json({ error: 'File not found' });
   }
 });
 
@@ -412,11 +412,11 @@ app.post('/api/color-match', upload.fields([
     } = options;
 
     if (!files?.reference || files.reference.length === 0) {
-      return res.status(400).json({ error: 'Kein Referenzbild hochgeladen' });
+      return res.status(400).json({ error: 'No reference image uploaded' });
     }
 
     if (!files?.images || files.images.length === 0) {
-      return res.status(400).json({ error: 'Keine Bilder zum Anpassen hochgeladen' });
+      return res.status(400).json({ error: 'No images to adjust uploaded' });
     }
 
     const referenceFile = files.reference[0];
@@ -479,8 +479,8 @@ app.post('/api/color-match', upload.fields([
     res.json({ success: true, results });
 
   } catch (error) {
-    console.error('Fehler beim Color Matching:', error);
-    res.status(500).json({ error: 'Fehler beim Color Matching' });
+    console.error('Color matching error:', error);
+    res.status(500).json({ error: 'Color matching error' });
   }
 });
 
@@ -505,11 +505,11 @@ app.post('/api/color-preview', upload.fields([
     } = options;
 
     if (!files?.reference || files.reference.length === 0) {
-      return res.status(400).json({ error: 'Kein Referenzbild hochgeladen' });
+      return res.status(400).json({ error: 'No reference image uploaded' });
     }
 
     if (!files?.source || files.source.length === 0) {
-      return res.status(400).json({ error: 'Kein Quellbild hochgeladen' });
+      return res.status(400).json({ error: 'No source image uploaded' });
     }
 
     const referenceFile = files.reference[0];
@@ -542,17 +542,17 @@ app.post('/api/color-preview', upload.fields([
     });
 
   } catch (error) {
-    console.error('Fehler beim Generieren der Vorschau:', error);
-    res.status(500).json({ error: 'Fehler beim Generieren der Vorschau' });
+    console.error('Preview generation error:', error);
+    res.status(500).json({ error: 'Preview generation error' });
   }
 });
 
 app.post('/api/cleanup', async (_req: Request, res: Response) => {
   try {
     await fileManager.cleanupOldFiles();
-    res.json({ success: true, message: 'Alte Dateien wurden gelöscht' });
+    res.json({ success: true, message: 'Old files were deleted' });
   } catch (error) {
-    res.status(500).json({ error: 'Fehler beim Aufräumen' });
+    res.status(500).json({ error: 'Cleanup error' });
   }
 });
 
