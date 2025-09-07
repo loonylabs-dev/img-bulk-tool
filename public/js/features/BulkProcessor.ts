@@ -35,6 +35,7 @@ export class BulkProcessor extends BaseComponent {
     this.bindEvents();
     this.bindFormEvents();
     this.setupProgressHandling();
+    this.initializeModeState();
   }
 
   private bindEvents(): void {
@@ -301,6 +302,15 @@ export class BulkProcessor extends BaseComponent {
     const autoTrimSizeOptions = document.getElementById('autoTrimSizeOptions')!;
     
     autoTrimSizeOptions.style.display = autoTrimFixedSizeCheckbox.checked ? 'block' : 'none';
+  }
+
+  private initializeModeState(): void {
+    // Initialize UI state based on default selected mode
+    this.handleModeChange();
+    this.handleAutoTrimChange();
+    this.handleSmartCropChange();
+    this.handleCropModeChange();
+    this.handleAutoTrimFixedSizeChange();
   }
 
   private getProcessOptions(): ProcessOptions[] {

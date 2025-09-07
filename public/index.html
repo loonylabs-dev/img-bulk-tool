@@ -50,16 +50,16 @@
                     <label>Modus:</label>
                     <div class="radio-group">
                         <label class="radio-label">
-                            <input type="radio" name="mode" value="split" checked>
-                            <span>✂️ Zerlegen (4 Teile)</span>
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" name="mode" value="resize">
+                            <input type="radio" name="mode" value="resize" checked>
                             <span>📐 Größe ändern</span>
                         </label>
                         <label class="radio-label">
                             <input type="radio" name="mode" value="compress">
                             <span>🗜️ Nur komprimieren</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="mode" value="split">
+                            <span>✂️ Zerlegen (4 Teile)</span>
                         </label>
                         <label class="radio-label">
                             <input type="radio" name="mode" value="split-resize">
@@ -198,11 +198,11 @@
                         <label for="combineWithOriginalName">Mit Originalnamen kombinieren (z.B. item_icon_horse)</label>
                     </div>
                     <div class="checkbox-container" style="margin-top: 10px;">
-                        <input type="checkbox" id="useSequentialNumbering" checked>
+                        <input type="checkbox" id="useSequentialNumbering">
                         <label for="useSequentialNumbering">Fortlaufende Nummerierung verwenden (z.B. _1, _2, _3)</label>
                     </div>
                     <div class="checkbox-container" style="margin-top: 10px;">
-                        <input type="checkbox" id="useOriginalFileNames">
+                        <input type="checkbox" id="useOriginalFileNames" checked>
                         <label for="useOriginalFileNames">Originalnamen 1:1 verwenden (überschreibt bestehende Dateien)</label>
                     </div>
                     <p class="hint">Wird für alle Bilder verwendet, wenn kein individuelles Präfix gesetzt ist</p>
