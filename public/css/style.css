@@ -304,6 +304,39 @@ header p {
   border-color: var(--primary-color);
 }
 
+/* Aspect Ratio Lock Button */
+.ratio-lock-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.ratio-lock-btn:hover {
+  border-color: var(--primary-color);
+  background: var(--bg-color);
+  transform: scale(1.05);
+}
+
+.ratio-lock-btn.locked {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.ratio-lock-btn.unlocked {
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
 #globalPrefix {
   width: 100%;
   padding: 0.75rem;
@@ -609,5 +642,11 @@ header p {
   
   .size-inputs span {
     display: none;
+  }
+
+  .ratio-lock-btn {
+    width: 100%;
+    height: 35px;
+    margin: 0.5rem 0;
   }
 }
