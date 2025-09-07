@@ -14,6 +14,10 @@ export class BulkProcessor extends BaseComponent {
   private processBtn!: HTMLButtonElement;
   private resultsSection!: HTMLElement;
   private resultsList!: HTMLElement;
+  
+  // Aspect ratio lock functionality
+  private aspectRatioLocked = true;
+  private currentAspectRatio = 1; // Default 1:1 ratio
 
   constructor() {
     super('bulk-tab');
@@ -122,11 +126,31 @@ export class BulkProcessor extends BaseComponent {
       handler: this.handleCropModeChange.bind(this)
     }));
 
+    // Aspect ratio lock functionality
+    const widthInput = document.getElementById('width') as HTMLInputElement;
+    const heightInput = document.getElementById('height') as HTMLInputElement;
+    const aspectRatioLockBtn = document.getElementById('aspectRatioLock');
+    
+    const aspectRatioListeners = [];
+    if (widthInput && heightInput && aspectRatioLockBtn) {
+      // Initialize aspect ratio from current values
+      if (widthInput.value && heightInput.value) {
+        this.currentAspectRatio = parseFloat(widthInput.value) / parseFloat(heightInput.value);
+      }
+      
+      aspectRatioListeners.push(
+        { element: widthInput, event: 'input' as const, handler: this.handleWidthChange.bind(this) },
+        { element: heightInput, event: 'input' as const, handler: this.handleHeightChange.bind(this) },
+        { element: aspectRatioLockBtn, event: 'click' as const, handler: this.toggleAspectRatioLock.bind(this) }
+      );
+    }
+
     this.addEventListeners('form', [
       ...modeListeners,
       ...sliderListeners,
       ...checkboxListeners,
-      ...cropModeListeners
+      ...cropModeListeners,
+      ...aspectRatioListeners
     ]);
   }
 
@@ -311,6 +335,81 @@ export class BulkProcessor extends BaseComponent {
     this.handleSmartCropChange();
     this.handleCropModeChange();
     this.handleAutoTrimFixedSizeChange();
+  }
+
+  private handleWidthChange(): void {
+    if (!this.aspectRatioLocked) return;
+    
+    const widthInput = document.getElementById('width') as HTMLInputElement;
+    const heightInput = document.getElementById('height') as HTMLInputElement;
+    
+    if (widthInput && heightInput && widthInput.value) {
+      const newWidth = parseFloat(widthInput.value);
+      if (!isNaN(newWidth) && newWidth > 0) {
+        // Use current width as master - calculate height to maintain square ratio (1:1)
+        // This ensures perfect synchronization regardless of previous states
+        const newHeight = Math.round(newWidth); // 1:1 aspect ratio
+        
+        // Update aspect ratio based on the new values
+        this.currentAspectRatio = newWidth / newHeight;
+        
+        if (newHeight !== parseFloat(heightInput.value)) {
+          heightInput.value = newHeight.toString();
+        }
+      }
+    }
+  }
+
+  private handleHeightChange(): void {
+    if (!this.aspectRatioLocked) return;
+    
+    const widthInput = document.getElementById('width') as HTMLInputElement;
+    const heightInput = document.getElementById('height') as HTMLInputElement;
+    
+    if (widthInput && heightInput && heightInput.value) {
+      const newHeight = parseFloat(heightInput.value);
+      if (!isNaN(newHeight) && newHeight > 0) {
+        // Use current height as master - calculate width to maintain square ratio (1:1)  
+        // This ensures perfect synchronization regardless of previous states
+        const newWidth = Math.round(newHeight); // 1:1 aspect ratio
+        
+        // Update aspect ratio based on the new values
+        this.currentAspectRatio = newWidth / newHeight;
+        
+        if (newWidth !== parseFloat(widthInput.value)) {
+          widthInput.value = newWidth.toString();
+        }
+      }
+    }
+  }
+
+  private toggleAspectRatioLock(): void {
+    const widthInput = document.getElementById('width') as HTMLInputElement;
+    const heightInput = document.getElementById('height') as HTMLInputElement;
+    const lockBtn = document.getElementById('aspectRatioLock') as HTMLButtonElement;
+    
+    if (!widthInput || !heightInput || !lockBtn) return;
+    
+    this.aspectRatioLocked = !this.aspectRatioLocked;
+    
+    if (this.aspectRatioLocked) {
+      // Update aspect ratio from current values
+      const width = parseFloat(widthInput.value) || 512;
+      const height = parseFloat(heightInput.value) || 512;
+      this.currentAspectRatio = width / height;
+      
+      // Update button appearance
+      lockBtn.classList.add('locked');
+      lockBtn.classList.remove('unlocked');
+      lockBtn.textContent = '🔒';
+      lockBtn.title = 'Seitenverhältnis entsperren';
+    } else {
+      // Update button appearance
+      lockBtn.classList.add('unlocked');
+      lockBtn.classList.remove('locked');
+      lockBtn.textContent = '🔓';
+      lockBtn.title = 'Seitenverhältnis sperren';
+    }
   }
 
   private getProcessOptions(): ProcessOptions[] {
