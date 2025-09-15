@@ -6,7 +6,7 @@ export interface ImageFile {
 }
 
 export interface ProcessOptions {
-  mode: 'split' | 'resize' | 'compress' | 'split-resize';
+  mode: 'split' | 'resize' | 'compress' | 'split-resize' | 'aspect-crop';
   quality: number;
   width?: number;
   height?: number;
@@ -28,6 +28,10 @@ export interface ProcessOptions {
   autoTrimFixedSize?: boolean;
   autoTrimTargetWidth?: number;
   autoTrimTargetHeight?: number;
+  // Aspect ratio crop options
+  aspectRatio?: string; // e.g., "16:9", "4:3", "1:1"
+  cropPositionX?: number; // 0-100%
+  cropPositionY?: number; // 0-100%
 }
 
 export interface ProcessResult {

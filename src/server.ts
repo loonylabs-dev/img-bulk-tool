@@ -3,13 +3,14 @@ import cors from 'cors';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs-extra';
+import net from 'net';
 import { ImageProcessor } from './lib/imageProcessor';
 import { Compressor } from './lib/compressor';
 import { FileManager } from './lib/fileManager';
 import { ColorAnalyzer } from './lib/colorAnalyzer';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const DEFAULT_PORT = process.env.PORT ? parseInt(process.env.PORT) : 3002;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -40,7 +41,7 @@ const fileManager = new FileManager(path.join(__dirname, '../output'));
 const colorAnalyzer = new ColorAnalyzer();
 
 interface ProcessOptions {
-  mode: 'split' | 'resize' | 'compress' | 'split-resize';
+  mode: 'split' | 'resize' | 'compress' | 'split-resize' | 'aspect-crop';
   quality?: number;
   width?: number;
   height?: number;
@@ -62,6 +63,10 @@ interface ProcessOptions {
   autoTrimFixedSize?: boolean;
   autoTrimTargetWidth?: number;
   autoTrimTargetHeight?: number;
+  // Aspect ratio crop options
+  aspectRatio?: string;
+  cropPositionX?: number;
+  cropPositionY?: number;
 }
 
 interface LayerTransformation {
@@ -301,6 +306,31 @@ app.post('/api/process', upload.array('images', 200), async (req: Request, res: 
               size: compressedSR.length
             });
           }
+          break;
+
+        case 'aspect-crop':
+          if (!option.aspectRatio) {
+            throw new Error('Aspect ratio is required for aspect-crop mode');
+          }
+
+          const aspectRatioCropped = await imageProcessor.cropToAspectRatio(processBuffer, {
+            aspectRatio: option.aspectRatio,
+            positionX: option.cropPositionX || 50, // Default to center
+            positionY: option.cropPositionY || 50  // Default to center
+          });
+
+          const filenameAspectCrop = await fileManager.getUniqueFilename(
+            actualPrefix,
+            option.useOriginalFileNames || option.useSequentialNumbering === false ? 0 : globalCounter++,
+            option.useOriginalFileNames ? false : option.useSequentialNumbering !== false
+          );
+          const compressedAspectCrop = await compressor.compressPNG(aspectRatioCropped, option.quality || 100);
+          await fileManager.saveFile(compressedAspectCrop, filenameAspectCrop);
+          processedFiles.push({
+            filename: filenameAspectCrop,
+            url: `/downloads/${filenameAspectCrop}`,
+            size: compressedAspectCrop.length
+          });
           break;
         default:
           throw new Error(`Unbekannter Modus: ${option.mode}`);
@@ -556,8 +586,59 @@ app.post('/api/cleanup', async (_req: Request, res: Response) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server läuft auf http://localhost:${PORT}`);
-  fs.ensureDirSync(path.join(__dirname, '../uploads'));
-  fs.ensureDirSync(path.join(__dirname, '../output'));
-});
+// Function to check if a port is available
+function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+
+    server.once('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(false);
+      } else {
+        resolve(false);
+      }
+    });
+
+    server.once('listening', () => {
+      server.close();
+      resolve(true);
+    });
+
+    server.listen(port);
+  });
+}
+
+// Function to find the next available port
+async function findAvailablePort(startPort: number, maxAttempts: number = 10): Promise<number> {
+  for (let port = startPort; port < startPort + maxAttempts; port++) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  throw new Error(`No available port found in range ${startPort}-${startPort + maxAttempts - 1}`);
+}
+
+// Start server with automatic port fallback
+async function startServer() {
+  try {
+    const availablePort = await findAvailablePort(DEFAULT_PORT);
+
+    app.listen(availablePort, () => {
+      if (availablePort !== DEFAULT_PORT) {
+        console.log(`⚠️  Port ${DEFAULT_PORT} was in use, server started on http://localhost:${availablePort}`);
+      } else {
+        console.log(`✅ Server läuft auf http://localhost:${availablePort}`);
+      }
+
+      // Ensure directories exist
+      fs.ensureDirSync(path.join(__dirname, '../uploads'));
+      fs.ensureDirSync(path.join(__dirname, '../output'));
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

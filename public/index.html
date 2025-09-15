@@ -65,6 +65,10 @@
                             <input type="radio" name="mode" value="split-resize">
                             <span>✂️📐 Split + Resize</span>
                         </label>
+                        <label class="radio-label">
+                            <input type="radio" name="mode" value="aspect-crop">
+                            <span>🎯 Aspect Ratio Crop</span>
+                        </label>
                     </div>
                 </div>
 
@@ -190,6 +194,60 @@
                         <span id="toleranceValue">10</span>
                     </div>
                     <p class="hint">Lower values = stricter transparency detection</p>
+                </div>
+
+                <!-- Aspect Ratio Crop Options -->
+                <div id="aspectCropOptions" class="option-group" style="display: none;">
+                    <label for="aspectRatio">Aspect Ratio:</label>
+                    <select id="aspectRatio">
+                        <option value="16:9">16:9 (Widescreen)</option>
+                        <option value="16:10">16:10 (Monitor)</option>
+                        <option value="4:3">4:3 (Classic)</option>
+                        <option value="1:1" selected>1:1 (Square)</option>
+                        <option value="9:16">9:16 (Portrait)</option>
+                        <option value="3:4">3:4 (Portrait Classic)</option>
+                        <option value="custom">Custom</option>
+                    </select>
+
+                    <div id="customAspectRatio" style="display: none; margin-top: 10px;">
+                        <label>Custom Ratio:</label>
+                        <div class="custom-ratio-inputs">
+                            <input type="number" id="customRatioWidth" placeholder="Width" min="1" max="100" value="16">
+                            <span>:</span>
+                            <input type="number" id="customRatioHeight" placeholder="Height" min="1" max="100" value="9">
+                        </div>
+                    </div>
+
+                    <div class="position-controls">
+                        <label>Crop Position:</label>
+                        <div class="position-sliders">
+                            <div class="slider-group">
+                                <label for="cropPositionX">Horizontal Position:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="cropPositionX" min="0" max="100" value="50">
+                                    <span id="cropPositionXValue">50%</span>
+                                </div>
+                            </div>
+                            <div class="slider-group">
+                                <label for="cropPositionY">Vertical Position:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="cropPositionY" min="0" max="100" value="50">
+                                    <span id="cropPositionYValue">50%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Canvas Container -->
+                    <div id="aspectCropPreview" class="aspect-crop-preview">
+                        <h3>Crop Preview</h3>
+                        <div class="preview-container">
+                            <canvas id="aspectCropCanvas" width="300" height="300"></canvas>
+                            <div class="preview-info">
+                                <p>Select an image to see crop preview</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="option-group">

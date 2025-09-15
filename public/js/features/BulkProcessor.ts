@@ -3,6 +3,7 @@ import { ApiService } from '../services/ApiService.js';
 import { FileService } from '../services/FileService.js';
 import { eventBus } from '../utils/EventBus.js';
 import { ImageFile, ProcessOptions, ProcessResult } from '../models/index.js';
+import { AspectCropPreview } from './AspectCropPreview.js';
 
 export class BulkProcessor extends BaseComponent {
   private images: ImageFile[] = [];
@@ -17,12 +18,15 @@ export class BulkProcessor extends BaseComponent {
   
   // Aspect ratio lock functionality
   private aspectRatioLocked = true;
-  private currentAspectRatio = 1; // Default 1:1 ratio
+
+  // Aspect crop preview
+  private aspectCropPreview: AspectCropPreview;
 
   constructor() {
     super('bulk-tab');
     this.apiService = ApiService.getInstance();
     this.fileService = FileService.getInstance();
+    this.aspectCropPreview = new AspectCropPreview();
     this.initializeElements();
   }
 
@@ -40,6 +44,7 @@ export class BulkProcessor extends BaseComponent {
     this.bindFormEvents();
     this.setupProgressHandling();
     this.initializeModeState();
+    this.aspectCropPreview.init();
   }
 
   private bindEvents(): void {
@@ -111,6 +116,32 @@ export class BulkProcessor extends BaseComponent {
       { id: 'autoTrimFixedSize', handler: this.handleAutoTrimFixedSizeChange.bind(this) }
     ];
 
+    // Aspect ratio crop events
+    const aspectRatioSelect = document.getElementById('aspectRatio') as HTMLSelectElement;
+    const customRatioWidth = document.getElementById('customRatioWidth') as HTMLInputElement;
+    const customRatioHeight = document.getElementById('customRatioHeight') as HTMLInputElement;
+    const cropPositionX = document.getElementById('cropPositionX') as HTMLInputElement;
+    const cropPositionY = document.getElementById('cropPositionY') as HTMLInputElement;
+
+    const aspectCropListeners = [];
+    if (aspectRatioSelect) {
+      aspectCropListeners.push(
+        { element: aspectRatioSelect, event: 'change' as const, handler: this.handleAspectRatioChange.bind(this) }
+      );
+    }
+    if (customRatioWidth && customRatioHeight) {
+      aspectCropListeners.push(
+        { element: customRatioWidth, event: 'input' as const, handler: this.handleCustomRatioChange.bind(this) },
+        { element: customRatioHeight, event: 'input' as const, handler: this.handleCustomRatioChange.bind(this) }
+      );
+    }
+    if (cropPositionX && cropPositionY) {
+      aspectCropListeners.push(
+        { element: cropPositionX, event: 'input' as const, handler: this.handleCropPositionChange.bind(this) },
+        { element: cropPositionY, event: 'input' as const, handler: this.handleCropPositionChange.bind(this) }
+      );
+    }
+
     const checkboxListeners = checkboxes
       .map(({ id, handler }) => {
         const checkbox = document.getElementById(id);
@@ -133,10 +164,6 @@ export class BulkProcessor extends BaseComponent {
     
     const aspectRatioListeners = [];
     if (widthInput && heightInput && aspectRatioLockBtn) {
-      // Initialize aspect ratio from current values
-      if (widthInput.value && heightInput.value) {
-        this.currentAspectRatio = parseFloat(widthInput.value) / parseFloat(heightInput.value);
-      }
       
       aspectRatioListeners.push(
         { element: widthInput, event: 'input' as const, handler: this.handleWidthChange.bind(this) },
@@ -150,7 +177,8 @@ export class BulkProcessor extends BaseComponent {
       ...sliderListeners,
       ...checkboxListeners,
       ...cropModeListeners,
-      ...aspectRatioListeners
+      ...aspectRatioListeners,
+      ...aspectCropListeners
     ]);
   }
 
@@ -214,8 +242,14 @@ export class BulkProcessor extends BaseComponent {
         console.error('Error loading file:', error);
       }
     }
-    
+
     this.renderImageList();
+
+    // Update aspect crop preview if in aspect-crop mode
+    const mode = (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value;
+    if (mode === 'aspect-crop' && this.images.length > 0) {
+      this.aspectCropPreview.updateImage(this.images[0]!.file);
+    }
   }
 
   private renderImageList(): void {
@@ -285,11 +319,22 @@ export class BulkProcessor extends BaseComponent {
   private handleModeChange(): void {
     const mode = (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value;
     const sizeOptions = document.getElementById('sizeOptions')!;
-    
+    const aspectCropOptions = document.getElementById('aspectCropOptions')!;
+
     if (mode === 'resize' || mode === 'split-resize') {
       sizeOptions.style.display = 'block';
     } else {
       sizeOptions.style.display = 'none';
+    }
+
+    if (mode === 'aspect-crop') {
+      aspectCropOptions.style.display = 'block';
+      // Update preview with first image if available
+      if (this.images.length > 0) {
+        this.aspectCropPreview.updateImage(this.images[0]!.file);
+      }
+    } else {
+      aspectCropOptions.style.display = 'none';
     }
   }
 
@@ -350,9 +395,6 @@ export class BulkProcessor extends BaseComponent {
         // This ensures perfect synchronization regardless of previous states
         const newHeight = Math.round(newWidth); // 1:1 aspect ratio
         
-        // Update aspect ratio based on the new values
-        this.currentAspectRatio = newWidth / newHeight;
-        
         if (newHeight !== parseFloat(heightInput.value)) {
           heightInput.value = newHeight.toString();
         }
@@ -369,12 +411,9 @@ export class BulkProcessor extends BaseComponent {
     if (widthInput && heightInput && heightInput.value) {
       const newHeight = parseFloat(heightInput.value);
       if (!isNaN(newHeight) && newHeight > 0) {
-        // Use current height as master - calculate width to maintain square ratio (1:1)  
+        // Use current height as master - calculate width to maintain square ratio (1:1)
         // This ensures perfect synchronization regardless of previous states
         const newWidth = Math.round(newHeight); // 1:1 aspect ratio
-        
-        // Update aspect ratio based on the new values
-        this.currentAspectRatio = newWidth / newHeight;
         
         if (newWidth !== parseFloat(widthInput.value)) {
           widthInput.value = newWidth.toString();
@@ -393,10 +432,6 @@ export class BulkProcessor extends BaseComponent {
     this.aspectRatioLocked = !this.aspectRatioLocked;
     
     if (this.aspectRatioLocked) {
-      // Update aspect ratio from current values
-      const width = parseFloat(widthInput.value) || 512;
-      const height = parseFloat(heightInput.value) || 512;
-      this.currentAspectRatio = width / height;
       
       // Update button appearance
       lockBtn.classList.add('locked');
@@ -410,6 +445,60 @@ export class BulkProcessor extends BaseComponent {
       lockBtn.textContent = '🔓';
       lockBtn.title = 'Seitenverhältnis sperren';
     }
+  }
+
+  private handleAspectRatioChange(): void {
+    const aspectRatioSelect = document.getElementById('aspectRatio') as HTMLSelectElement;
+    const customAspectRatio = document.getElementById('customAspectRatio')!;
+
+    if (aspectRatioSelect.value === 'custom') {
+      customAspectRatio.style.display = 'block';
+    } else {
+      customAspectRatio.style.display = 'none';
+    }
+
+    this.updateAspectCropPreview();
+  }
+
+  private handleCustomRatioChange(): void {
+    this.updateAspectCropPreview();
+  }
+
+  private handleCropPositionChange(): void {
+    const cropPositionX = document.getElementById('cropPositionX') as HTMLInputElement;
+    const cropPositionY = document.getElementById('cropPositionY') as HTMLInputElement;
+    const cropPositionXValue = document.getElementById('cropPositionXValue');
+    const cropPositionYValue = document.getElementById('cropPositionYValue');
+
+    if (cropPositionXValue) {
+      cropPositionXValue.textContent = `${cropPositionX.value}%`;
+    }
+    if (cropPositionYValue) {
+      cropPositionYValue.textContent = `${cropPositionY.value}%`;
+    }
+
+    this.updateAspectCropPreview();
+  }
+
+  private updateAspectCropPreview(): void {
+    const aspectRatio = this.getCurrentAspectRatio();
+    const cropPositionX = parseFloat((document.getElementById('cropPositionX') as HTMLInputElement)?.value || '50');
+    const cropPositionY = parseFloat((document.getElementById('cropPositionY') as HTMLInputElement)?.value || '50');
+
+    this.aspectCropPreview.updateAspectRatio(aspectRatio);
+    this.aspectCropPreview.updatePosition(cropPositionX, cropPositionY);
+  }
+
+  private getCurrentAspectRatio(): string {
+    const aspectRatioSelect = document.getElementById('aspectRatio') as HTMLSelectElement;
+
+    if (aspectRatioSelect.value === 'custom') {
+      const customWidth = (document.getElementById('customRatioWidth') as HTMLInputElement)?.value || '16';
+      const customHeight = (document.getElementById('customRatioHeight') as HTMLInputElement)?.value || '9';
+      return `${customWidth}:${customHeight}`;
+    }
+
+    return aspectRatioSelect.value;
   }
 
   private getProcessOptions(): ProcessOptions[] {
@@ -450,6 +539,13 @@ export class BulkProcessor extends BaseComponent {
     
     const cropTolerance = parseInt((document.getElementById('cropTolerance') as HTMLInputElement)?.value || '10');
 
+    // Aspect ratio crop options (only set when mode is aspect-crop)
+    const aspectRatioOptions = mode === 'aspect-crop' ? {
+      aspectRatio: this.getCurrentAspectRatio(),
+      cropPositionX: parseFloat((document.getElementById('cropPositionX') as HTMLInputElement)?.value || '50'),
+      cropPositionY: parseFloat((document.getElementById('cropPositionY') as HTMLInputElement)?.value || '50')
+    } : {};
+
     return this.images.map(img => ({
       mode,
       quality,
@@ -472,7 +568,8 @@ export class BulkProcessor extends BaseComponent {
       cropPaddingRight,
       cropPaddingBottom,
       cropPaddingLeft,
-      cropTolerance
+      cropTolerance,
+      ...aspectRatioOptions
     }));
   }
 
@@ -586,5 +683,6 @@ export class BulkProcessor extends BaseComponent {
     this.images = [];
     this.renderImageList();
     this.resultsSection.style.display = 'none';
+    this.aspectCropPreview.reset();
   }
 }

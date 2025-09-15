@@ -33,6 +33,12 @@ interface LayerTransformation {
   cropHeight?: number;
 }
 
+interface AspectRatioCropOptions {
+  aspectRatio: string; // e.g., "16:9", "4:3", "1:1"
+  positionX: number; // 0-100% horizontal position
+  positionY: number; // 0-100% vertical position
+}
+
 export class ImageProcessor {
   async splitImage(buffer: Buffer): Promise<Buffer[]> {
     const image = sharp(buffer);
@@ -705,5 +711,64 @@ export class ImageProcessor {
       .toBuffer();
 
     return result;
+  }
+
+  async cropToAspectRatio(buffer: Buffer, options: AspectRatioCropOptions): Promise<Buffer> {
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+
+    if (!metadata.width || !metadata.height) {
+      throw new Error('Bildabmessungen konnten nicht ermittelt werden');
+    }
+
+    // Parse aspect ratio
+    const [ratioWidthStr, ratioHeightStr] = options.aspectRatio.split(':');
+    const ratioWidth = parseFloat(ratioWidthStr);
+    const ratioHeight = parseFloat(ratioHeightStr);
+
+    if (!ratioWidth || !ratioHeight || ratioWidth <= 0 || ratioHeight <= 0) {
+      throw new Error('Ungültiges Seitenverhältnis');
+    }
+
+    const targetRatio = ratioWidth / ratioHeight;
+    const sourceRatio = metadata.width / metadata.height;
+
+    let cropWidth: number;
+    let cropHeight: number;
+
+    // Calculate crop dimensions to fit target aspect ratio
+    if (sourceRatio > targetRatio) {
+      // Source is wider than target ratio - crop width
+      cropHeight = metadata.height;
+      cropWidth = Math.round(cropHeight * targetRatio);
+    } else {
+      // Source is taller than target ratio - crop height
+      cropWidth = metadata.width;
+      cropHeight = Math.round(cropWidth / targetRatio);
+    }
+
+    // Calculate crop position based on percentage
+    const maxX = metadata.width - cropWidth;
+    const maxY = metadata.height - cropHeight;
+
+    const cropX = Math.round(maxX * (options.positionX / 100));
+    const cropY = Math.round(maxY * (options.positionY / 100));
+
+    // Ensure crop area is within bounds
+    const finalCropX = Math.max(0, Math.min(cropX, maxX));
+    const finalCropY = Math.max(0, Math.min(cropY, maxY));
+
+    // Apply crop
+    const croppedBuffer = await image
+      .extract({
+        left: finalCropX,
+        top: finalCropY,
+        width: cropWidth,
+        height: cropHeight
+      })
+      .png()
+      .toBuffer();
+
+    return croppedBuffer;
   }
 }
