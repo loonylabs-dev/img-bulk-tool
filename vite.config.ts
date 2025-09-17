@@ -32,6 +32,12 @@ export default defineConfig({
         changeOrigin: true,
         timeout: 180000, // 3 minutes timeout
         proxyTimeout: 180000
+      },
+      '/downloads': {
+        target: 'http://localhost:3003',
+        changeOrigin: true,
+        timeout: 180000, // 3 minutes timeout for large file downloads
+        proxyTimeout: 180000
       }
     }
   },
