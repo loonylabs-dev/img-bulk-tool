@@ -27,7 +27,12 @@ export default defineConfig({
   server: {
     port: 3002,
     proxy: {
-      '/api': 'http://localhost:3002'
+      '/api': {
+        target: 'http://localhost:3003',
+        changeOrigin: true,
+        timeout: 180000, // 3 minutes timeout
+        proxyTimeout: 180000
+      }
     }
   },
   esbuild: {

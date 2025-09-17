@@ -6,6 +6,7 @@
     <title>Image Bulk Processing Tool</title>
   <script type="module" src="./js/main.ts"></script>
   <link rel="stylesheet" crossorigin href="/css/main.css">
+  <link rel="stylesheet" href="/css/multi-preview.css">
 </head>
 <body>
     <div class="container">
@@ -218,33 +219,13 @@
                         </div>
                     </div>
 
-                    <div class="position-controls">
-                        <label>Crop Position:</label>
-                        <div class="position-sliders">
-                            <div class="slider-group">
-                                <label for="cropPositionX">Horizontal Position:</label>
-                                <div class="slider-container">
-                                    <input type="range" id="cropPositionX" min="0" max="100" value="50">
-                                    <span id="cropPositionXValue">50%</span>
-                                </div>
-                            </div>
-                            <div class="slider-group">
-                                <label for="cropPositionY">Vertical Position:</label>
-                                <div class="slider-container">
-                                    <input type="range" id="cropPositionY" min="0" max="100" value="50">
-                                    <span id="cropPositionYValue">50%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Preview Canvas Container -->
+                    <!-- Multi-Image Preview Container -->
                     <div id="aspectCropPreview" class="aspect-crop-preview">
                         <h3>Crop Preview</h3>
-                        <div class="preview-container">
-                            <canvas id="aspectCropCanvas" width="300" height="300"></canvas>
+                        <p class="hint">Upload images and drag the crop areas to position them individually. The aspect ratio applies to all images.</p>
+                        <div id="multiPreviewContainer" class="multi-preview-container">
                             <div class="preview-info">
-                                <p>Select an image to see crop preview</p>
+                                <p>Select images to see crop preview</p>
                             </div>
                         </div>
                     </div>

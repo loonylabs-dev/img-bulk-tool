@@ -3,6 +3,9 @@ export interface ImageFile {
   file: File;
   preview: string;
   prefix: string;
+  // Aspect ratio crop positions (individual per image)
+  cropPositionX?: number; // 0-100%, defaults to 50
+  cropPositionY?: number; // 0-100%, defaults to 50
 }
 
 export interface ProcessOptions {

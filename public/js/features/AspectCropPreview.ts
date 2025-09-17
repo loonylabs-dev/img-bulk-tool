@@ -1,19 +1,23 @@
 import { BaseComponent } from '../components/BaseComponent.js';
+import { ImageFile } from '../models/index.js';
+
+interface CanvasInfo {
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+  imageFile: ImageFile;
+  loadedImage: HTMLImageElement | null;
+  isDragging: boolean;
+  dragStartX: number;
+  dragStartY: number;
+  dragStartPositionX: number;
+  dragStartPositionY: number;
+}
 
 export class AspectCropPreview extends BaseComponent {
-  private canvas!: HTMLCanvasElement;
-  private ctx!: CanvasRenderingContext2D;
-  private currentImage: HTMLImageElement | null = null;
+  private container!: HTMLElement;
+  private images: ImageFile[] = [];
+  private canvases: Map<string, CanvasInfo> = new Map();
   private aspectRatio: string = '1:1';
-  private positionX: number = 50;
-  private positionY: number = 50;
-
-  // Drag & Drop state
-  private isDragging: boolean = false;
-  private dragStartX: number = 0;
-  private dragStartY: number = 0;
-  private dragStartPositionX: number = 0;
-  private dragStartPositionY: number = 0;
 
   constructor() {
     super('aspectCropOptions');
@@ -21,43 +25,106 @@ export class AspectCropPreview extends BaseComponent {
   }
 
   private initializeElements(): void {
-    this.canvas = this.$('#aspectCropCanvas') as HTMLCanvasElement;
-    if (!this.canvas) {
-      throw new Error('Aspect crop canvas not found');
+    this.container = this.$('#multiPreviewContainer') as HTMLElement;
+    if (!this.container) {
+      throw new Error('Multi-preview container not found');
     }
-    this.ctx = this.canvas.getContext('2d')!;
   }
 
   public init(): void {
-    this.bindCanvasEvents();
-    this.renderCanvas();
+    this.renderContainer();
   }
 
-  public updateImage(imageFile: File): void {
-    if (!imageFile) return;
-
-    const img = new Image();
-    img.onload = () => {
-      this.currentImage = img;
-      this.renderCanvas();
-    };
-    img.src = URL.createObjectURL(imageFile);
+  public updateImages(imageFiles: ImageFile[]): void {
+    this.images = imageFiles.map(img => ({
+      ...img,
+      cropPositionX: img.cropPositionX || 50,
+      cropPositionY: img.cropPositionY || 50
+    }));
+    this.renderContainer();
   }
 
   public updateAspectRatio(aspectRatio: string): void {
     this.aspectRatio = aspectRatio;
-    this.renderCanvas();
+    this.renderAllCanvases();
   }
 
-  public updatePosition(x: number, y: number): void {
-    this.positionX = x;
-    this.positionY = y;
-    this.renderCanvas();
+  private renderContainer(): void {
+    if (this.images.length === 0) {
+      this.container.innerHTML = '<div class="preview-info"><p>Select images to see crop preview</p></div>';
+      return;
+    }
+
+    // Clear existing canvases
+    this.canvases.clear();
+    this.removeEventListeners('canvas');
+
+    // Create grid layout
+    this.container.innerHTML = '';
+    this.container.className = 'multi-preview-container';
+
+    this.images.forEach((imageFile, index) => {
+      const previewItem = document.createElement('div');
+      previewItem.className = 'preview-item';
+
+      const label = document.createElement('div');
+      label.className = 'preview-label';
+      label.textContent = imageFile.file.name;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 200;
+      canvas.height = 200;
+      canvas.className = 'crop-preview-canvas';
+      canvas.dataset['imageIndex'] = index.toString();
+
+      const ctx = canvas.getContext('2d')!;
+
+      previewItem.appendChild(label);
+      previewItem.appendChild(canvas);
+      this.container.appendChild(previewItem);
+
+      // Store canvas info
+      const canvasInfo: CanvasInfo = {
+        canvas,
+        ctx,
+        imageFile,
+        loadedImage: null,
+        isDragging: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        dragStartPositionX: 0,
+        dragStartPositionY: 0
+      };
+
+      const canvasKey = `canvas_${index}`;
+      this.canvases.set(canvasKey, canvasInfo);
+
+      // Load and render image
+      this.loadImageAndRender(canvasKey, imageFile);
+
+      // Bind events for this canvas
+      this.bindCanvasEvents(canvasKey);
+    });
   }
 
-  private renderCanvas(): void {
-    const canvas = this.canvas;
-    const ctx = this.ctx;
+  private loadImageAndRender(canvasKey: string, imageFile: ImageFile): void {
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo) return;
+
+    const img = new Image();
+    img.onload = () => {
+      // Store the loaded image in canvasInfo
+      canvasInfo.loadedImage = img;
+      this.renderCanvas(canvasKey, img, imageFile);
+    };
+    img.src = URL.createObjectURL(imageFile.file);
+  }
+
+  private renderCanvas(canvasKey: string, image: HTMLImageElement, imageFile: ImageFile): void {
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo) return;
+
+    const { canvas, ctx } = canvasInfo;
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -66,29 +133,19 @@ export class AspectCropPreview extends BaseComponent {
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (!this.currentImage) {
-      // Draw placeholder text
-      ctx.fillStyle = '#666';
-      ctx.font = '14px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Select an image to see preview', canvas.width / 2, canvas.height / 2);
-      return;
-    }
-
     // Calculate crop dimensions based on aspect ratio
-    const { cropWidth, cropHeight, cropX, cropY } = this.calculateCropDimensions();
+    const { cropWidth, cropHeight, cropX, cropY } = this.calculateCropDimensions(image, imageFile);
 
     // Scale image to fit canvas while maintaining aspect ratio
-    const scale = Math.min(canvas.width / this.currentImage.width, canvas.height / this.currentImage.height);
-    const scaledWidth = this.currentImage.width * scale;
-    const scaledHeight = this.currentImage.height * scale;
+    const scale = Math.min(canvas.width / image.width, canvas.height / image.height);
+    const scaledWidth = image.width * scale;
+    const scaledHeight = image.height * scale;
     const offsetX = (canvas.width - scaledWidth) / 2;
     const offsetY = (canvas.height - scaledHeight) / 2;
 
     // Draw original image
     ctx.drawImage(
-      this.currentImage,
+      image,
       offsetX,
       offsetY,
       scaledWidth,
@@ -96,10 +153,10 @@ export class AspectCropPreview extends BaseComponent {
     );
 
     // Calculate crop rectangle position on canvas
-    const cropCanvasX = offsetX + (cropX / this.currentImage.width) * scaledWidth;
-    const cropCanvasY = offsetY + (cropY / this.currentImage.height) * scaledHeight;
-    const cropCanvasWidth = (cropWidth / this.currentImage.width) * scaledWidth;
-    const cropCanvasHeight = (cropHeight / this.currentImage.height) * scaledHeight;
+    const cropCanvasX = offsetX + (cropX / image.width) * scaledWidth;
+    const cropCanvasY = offsetY + (cropY / image.height) * scaledHeight;
+    const cropCanvasWidth = (cropWidth / image.width) * scaledWidth;
+    const cropCanvasHeight = (cropHeight / image.height) * scaledHeight;
 
     // Draw crop overlay (darken areas outside crop)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -125,8 +182,25 @@ export class AspectCropPreview extends BaseComponent {
     this.drawCornerHandles(ctx, cropCanvasX, cropCanvasY, cropCanvasWidth, cropCanvasHeight);
   }
 
-  private calculateCropDimensions(): { cropWidth: number; cropHeight: number; cropX: number; cropY: number } {
-    if (!this.currentImage) {
+  private renderAllCanvases(): void {
+    this.canvases.forEach((canvasInfo, canvasKey) => {
+      if (canvasInfo.loadedImage) {
+        // Use already loaded image
+        this.renderCanvas(canvasKey, canvasInfo.loadedImage, canvasInfo.imageFile);
+      } else {
+        // Load image if not already loaded
+        const img = new Image();
+        img.onload = () => {
+          canvasInfo.loadedImage = img;
+          this.renderCanvas(canvasKey, img, canvasInfo.imageFile);
+        };
+        img.src = URL.createObjectURL(canvasInfo.imageFile.file);
+      }
+    });
+  }
+
+  private calculateCropDimensions(image: HTMLImageElement, imageFile: ImageFile): { cropWidth: number; cropHeight: number; cropX: number; cropY: number } {
+    if (!image) {
       return { cropWidth: 0, cropHeight: 0, cropX: 0, cropY: 0 };
     }
 
@@ -136,11 +210,11 @@ export class AspectCropPreview extends BaseComponent {
     const ratioHeight = parseFloat(ratioHeightStr || '1');
 
     if (!ratioWidth || !ratioHeight || ratioWidth <= 0 || ratioHeight <= 0) {
-      return { cropWidth: this.currentImage.width, cropHeight: this.currentImage.height, cropX: 0, cropY: 0 };
+      return { cropWidth: image.width, cropHeight: image.height, cropX: 0, cropY: 0 };
     }
 
     const targetRatio = ratioWidth / ratioHeight;
-    const sourceRatio = this.currentImage.width / this.currentImage.height;
+    const sourceRatio = image.width / image.height;
 
     let cropWidth: number;
     let cropHeight: number;
@@ -148,20 +222,23 @@ export class AspectCropPreview extends BaseComponent {
     // Calculate crop dimensions to fit target aspect ratio
     if (sourceRatio > targetRatio) {
       // Source is wider than target ratio - crop width
-      cropHeight = this.currentImage.height;
+      cropHeight = image.height;
       cropWidth = Math.round(cropHeight * targetRatio);
     } else {
       // Source is taller than target ratio - crop height
-      cropWidth = this.currentImage.width;
+      cropWidth = image.width;
       cropHeight = Math.round(cropWidth / targetRatio);
     }
 
-    // Calculate crop position based on percentage
-    const maxX = this.currentImage.width - cropWidth;
-    const maxY = this.currentImage.height - cropHeight;
+    // Calculate crop position based on percentage from imageFile
+    const positionX = imageFile.cropPositionX || 50;
+    const positionY = imageFile.cropPositionY || 50;
 
-    const cropX = Math.round(maxX * (this.positionX / 100));
-    const cropY = Math.round(maxY * (this.positionY / 100));
+    const maxX = image.width - cropWidth;
+    const maxY = image.height - cropHeight;
+
+    const cropX = Math.round(maxX * (positionX / 100));
+    const cropY = Math.round(maxY * (positionY / 100));
 
     return {
       cropWidth,
@@ -189,90 +266,122 @@ export class AspectCropPreview extends BaseComponent {
   }
 
   public reset(): void {
-    this.currentImage = null;
+    this.images = [];
     this.aspectRatio = '1:1';
-    this.positionX = 50;
-    this.positionY = 50;
-    this.isDragging = false;
-    this.renderCanvas();
+    this.canvases.clear();
+    this.renderContainer();
   }
 
-  private bindCanvasEvents(): void {
-    const canvas = this.canvas;
+  public getImagePositions(): { file: File; cropPositionX: number; cropPositionY: number }[] {
+    return this.images.map(img => ({
+      file: img.file,
+      cropPositionX: img.cropPositionX || 50,
+      cropPositionY: img.cropPositionY || 50
+    }));
+  }
+
+  private bindCanvasEvents(canvasKey: string): void {
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo) return;
+
+    const { canvas } = canvasInfo;
 
     const canvasListeners = [
-      { element: canvas, event: 'mousedown', handler: this.handleMouseDown.bind(this) as EventListener },
-      { element: canvas, event: 'mousemove', handler: this.handleMouseMove.bind(this) as EventListener },
-      { element: canvas, event: 'mouseup', handler: this.handleMouseUp.bind(this) as EventListener },
-      { element: canvas, event: 'mouseleave', handler: this.handleMouseLeave.bind(this) as EventListener }
+      { element: canvas, event: 'mousedown', handler: ((e: Event) => this.handleMouseDown(e, canvasKey)) as EventListener },
+      { element: canvas, event: 'mousemove', handler: ((e: Event) => this.handleMouseMove(e, canvasKey)) as EventListener },
+      { element: canvas, event: 'mouseup', handler: ((e: Event) => this.handleMouseUp(e, canvasKey)) as EventListener },
+      { element: canvas, event: 'mouseleave', handler: ((e: Event) => this.handleMouseLeave(e, canvasKey)) as EventListener }
     ];
 
     this.addEventListeners('canvas', canvasListeners);
   }
 
-  private handleMouseDown(e: Event): void {
+  private handleMouseDown(e: Event, canvasKey: string): void {
     const mouseEvent = e as MouseEvent;
-    const rect = this.canvas.getBoundingClientRect();
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo) return;
+
+    const rect = canvasInfo.canvas.getBoundingClientRect();
     const mouseX = mouseEvent.clientX - rect.left;
     const mouseY = mouseEvent.clientY - rect.top;
 
-    if (this.isInsideCropArea(mouseX, mouseY)) {
-      this.isDragging = true;
-      this.dragStartX = mouseX;
-      this.dragStartY = mouseY;
-      this.dragStartPositionX = this.positionX;
-      this.dragStartPositionY = this.positionY;
-      this.canvas.style.cursor = 'grabbing';
+    if (this.isInsideCropArea(mouseX, mouseY, canvasKey)) {
+      canvasInfo.isDragging = true;
+      canvasInfo.dragStartX = mouseX;
+      canvasInfo.dragStartY = mouseY;
+      canvasInfo.dragStartPositionX = canvasInfo.imageFile.cropPositionX || 50;
+      canvasInfo.dragStartPositionY = canvasInfo.imageFile.cropPositionY || 50;
+      canvasInfo.canvas.style.cursor = 'grabbing';
     }
   }
 
-  private handleMouseMove(e: Event): void {
+  private handleMouseMove(e: Event, canvasKey: string): void {
     const mouseEvent = e as MouseEvent;
-    const rect = this.canvas.getBoundingClientRect();
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo) return;
+
+    const rect = canvasInfo.canvas.getBoundingClientRect();
     const mouseX = mouseEvent.clientX - rect.left;
     const mouseY = mouseEvent.clientY - rect.top;
 
-    if (this.isDragging) {
+    if (canvasInfo.isDragging) {
       // Calculate drag delta
-      const deltaX = mouseX - this.dragStartX;
-      const deltaY = mouseY - this.dragStartY;
+      const deltaX = mouseX - canvasInfo.dragStartX;
+      const deltaY = mouseY - canvasInfo.dragStartY;
 
       // Convert delta to percentage of crop area movement
-      const newPosition = this.calculateNewPosition(deltaX, deltaY);
+      const newPosition = this.calculateNewPosition(deltaX, deltaY, canvasKey);
 
-      // Update position and render
-      this.positionX = newPosition.x;
-      this.positionY = newPosition.y;
-      this.renderCanvas();
-      this.updateSliderValues();
+      // Update position in the imageFile and render
+      canvasInfo.imageFile.cropPositionX = newPosition.x;
+      canvasInfo.imageFile.cropPositionY = newPosition.y;
+
+      // Update the images array as well
+      const imageIndex = parseInt(canvasInfo.canvas.dataset['imageIndex'] || '0');
+      if (this.images[imageIndex]) {
+        this.images[imageIndex]!.cropPositionX = newPosition.x;
+        this.images[imageIndex]!.cropPositionY = newPosition.y;
+      }
+
+      // Re-render this specific canvas using the stored loaded image
+      if (canvasInfo.loadedImage) {
+        this.renderCanvas(canvasKey, canvasInfo.loadedImage, canvasInfo.imageFile);
+      }
     } else {
       // Update cursor based on hover position
-      if (this.isInsideCropArea(mouseX, mouseY)) {
-        this.canvas.style.cursor = 'grab';
+      if (this.isInsideCropArea(mouseX, mouseY, canvasKey)) {
+        canvasInfo.canvas.style.cursor = 'grab';
       } else {
-        this.canvas.style.cursor = 'default';
+        canvasInfo.canvas.style.cursor = 'default';
       }
     }
   }
 
-  private handleMouseUp(): void {
-    if (this.isDragging) {
-      this.isDragging = false;
-      this.canvas.style.cursor = 'grab';
+  private handleMouseUp(_e: Event, canvasKey: string): void {
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo) return;
+
+    if (canvasInfo.isDragging) {
+      canvasInfo.isDragging = false;
+      canvasInfo.canvas.style.cursor = 'grab';
     }
   }
 
-  private handleMouseLeave(): void {
-    if (this.isDragging) {
-      this.isDragging = false;
-      this.canvas.style.cursor = 'default';
+  private handleMouseLeave(_e: Event, canvasKey: string): void {
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo) return;
+
+    if (canvasInfo.isDragging) {
+      canvasInfo.isDragging = false;
+      canvasInfo.canvas.style.cursor = 'default';
     }
   }
 
-  private isInsideCropArea(mouseX: number, mouseY: number): boolean {
-    if (!this.currentImage) return false;
+  private isInsideCropArea(mouseX: number, mouseY: number, canvasKey: string): boolean {
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo) return false;
 
-    const { cropX, cropY, cropWidth, cropHeight } = this.getCropAreaOnCanvas();
+    const { cropX, cropY, cropWidth, cropHeight } = this.getCropAreaOnCanvas(canvasKey);
 
     return mouseX >= cropX &&
            mouseX <= cropX + cropWidth &&
@@ -280,45 +389,53 @@ export class AspectCropPreview extends BaseComponent {
            mouseY <= cropY + cropHeight;
   }
 
-  private calculateNewPosition(deltaX: number, deltaY: number): { x: number; y: number } {
-    if (!this.currentImage) return { x: this.positionX, y: this.positionY };
+  private calculateNewPosition(deltaX: number, deltaY: number, canvasKey: string): { x: number; y: number } {
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo || !canvasInfo.loadedImage) return { x: 50, y: 50 };
+
+    // Use the stored loaded image
+    const img = canvasInfo.loadedImage;
 
     // Get image and crop dimensions on canvas
-    const scale = Math.min(this.canvas.width / this.currentImage.width, this.canvas.height / this.currentImage.height);
-    const scaledWidth = this.currentImage.width * scale;
-    const scaledHeight = this.currentImage.height * scale;
+    const scale = Math.min(canvasInfo.canvas.width / img.width, canvasInfo.canvas.height / img.height);
+    const scaledWidth = img.width * scale;
+    const scaledHeight = img.height * scale;
 
     // Convert pixel delta to percentage delta
     const percentDeltaX = (deltaX / scaledWidth) * 100;
     const percentDeltaY = (deltaY / scaledHeight) * 100;
 
     // Calculate new position
-    const newX = Math.max(0, Math.min(100, this.dragStartPositionX + percentDeltaX));
-    const newY = Math.max(0, Math.min(100, this.dragStartPositionY + percentDeltaY));
+    const newX = Math.max(0, Math.min(100, canvasInfo.dragStartPositionX + percentDeltaX));
+    const newY = Math.max(0, Math.min(100, canvasInfo.dragStartPositionY + percentDeltaY));
 
     return { x: newX, y: newY };
   }
 
-  private getCropAreaOnCanvas(): { cropX: number; cropY: number; cropWidth: number; cropHeight: number } {
-    if (!this.currentImage) {
+  private getCropAreaOnCanvas(canvasKey: string): { cropX: number; cropY: number; cropWidth: number; cropHeight: number } {
+    const canvasInfo = this.canvases.get(canvasKey);
+    if (!canvasInfo || !canvasInfo.loadedImage) {
       return { cropX: 0, cropY: 0, cropWidth: 0, cropHeight: 0 };
     }
 
+    // Use the stored loaded image
+    const img = canvasInfo.loadedImage;
+
     // Calculate crop dimensions based on aspect ratio
-    const { cropWidth, cropHeight, cropX, cropY } = this.calculateCropDimensions();
+    const { cropWidth, cropHeight, cropX, cropY } = this.calculateCropDimensions(img, canvasInfo.imageFile);
 
     // Scale image to fit canvas while maintaining aspect ratio
-    const scale = Math.min(this.canvas.width / this.currentImage.width, this.canvas.height / this.currentImage.height);
-    const scaledWidth = this.currentImage.width * scale;
-    const scaledHeight = this.currentImage.height * scale;
-    const offsetX = (this.canvas.width - scaledWidth) / 2;
-    const offsetY = (this.canvas.height - scaledHeight) / 2;
+    const scale = Math.min(canvasInfo.canvas.width / img.width, canvasInfo.canvas.height / img.height);
+    const scaledWidth = img.width * scale;
+    const scaledHeight = img.height * scale;
+    const offsetX = (canvasInfo.canvas.width - scaledWidth) / 2;
+    const offsetY = (canvasInfo.canvas.height - scaledHeight) / 2;
 
     // Calculate crop rectangle position on canvas
-    const cropCanvasX = offsetX + (cropX / this.currentImage.width) * scaledWidth;
-    const cropCanvasY = offsetY + (cropY / this.currentImage.height) * scaledHeight;
-    const cropCanvasWidth = (cropWidth / this.currentImage.width) * scaledWidth;
-    const cropCanvasHeight = (cropHeight / this.currentImage.height) * scaledHeight;
+    const cropCanvasX = offsetX + (cropX / img.width) * scaledWidth;
+    const cropCanvasY = offsetY + (cropY / img.height) * scaledHeight;
+    const cropCanvasWidth = (cropWidth / img.width) * scaledWidth;
+    const cropCanvasHeight = (cropHeight / img.height) * scaledHeight;
 
     return {
       cropX: cropCanvasX,
@@ -326,26 +443,5 @@ export class AspectCropPreview extends BaseComponent {
       cropWidth: cropCanvasWidth,
       cropHeight: cropCanvasHeight
     };
-  }
-
-  private updateSliderValues(): void {
-    // Update the slider values to match the current position
-    const cropPositionX = document.getElementById('cropPositionX') as HTMLInputElement;
-    const cropPositionY = document.getElementById('cropPositionY') as HTMLInputElement;
-    const cropPositionXValue = document.getElementById('cropPositionXValue');
-    const cropPositionYValue = document.getElementById('cropPositionYValue');
-
-    if (cropPositionX) {
-      cropPositionX.value = this.positionX.toString();
-    }
-    if (cropPositionY) {
-      cropPositionY.value = this.positionY.toString();
-    }
-    if (cropPositionXValue) {
-      cropPositionXValue.textContent = `${Math.round(this.positionX)}%`;
-    }
-    if (cropPositionYValue) {
-      cropPositionYValue.textContent = `${Math.round(this.positionY)}%`;
-    }
   }
 }

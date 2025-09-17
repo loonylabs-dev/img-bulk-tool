@@ -22,6 +22,9 @@ export class BulkProcessor extends BaseComponent {
   // Aspect crop preview
   private aspectCropPreview: AspectCropPreview;
 
+  // Progress tracking
+  private progressInterval: NodeJS.Timeout | null = null;
+
   constructor() {
     super('bulk-tab');
     this.apiService = ApiService.getInstance();
@@ -120,8 +123,6 @@ export class BulkProcessor extends BaseComponent {
     const aspectRatioSelect = document.getElementById('aspectRatio') as HTMLSelectElement;
     const customRatioWidth = document.getElementById('customRatioWidth') as HTMLInputElement;
     const customRatioHeight = document.getElementById('customRatioHeight') as HTMLInputElement;
-    const cropPositionX = document.getElementById('cropPositionX') as HTMLInputElement;
-    const cropPositionY = document.getElementById('cropPositionY') as HTMLInputElement;
 
     const aspectCropListeners = [];
     if (aspectRatioSelect) {
@@ -133,12 +134,6 @@ export class BulkProcessor extends BaseComponent {
       aspectCropListeners.push(
         { element: customRatioWidth, event: 'input' as const, handler: this.handleCustomRatioChange.bind(this) },
         { element: customRatioHeight, event: 'input' as const, handler: this.handleCustomRatioChange.bind(this) }
-      );
-    }
-    if (cropPositionX && cropPositionY) {
-      aspectCropListeners.push(
-        { element: cropPositionX, event: 'input' as const, handler: this.handleCropPositionChange.bind(this) },
-        { element: cropPositionY, event: 'input' as const, handler: this.handleCropPositionChange.bind(this) }
       );
     }
 
@@ -236,7 +231,9 @@ export class BulkProcessor extends BaseComponent {
         this.images.push({
           file,
           preview,
-          prefix: ''
+          prefix: '',
+          cropPositionX: 50, // Default to center
+          cropPositionY: 50  // Default to center
         });
       } catch (error) {
         console.error('Error loading file:', error);
@@ -247,8 +244,8 @@ export class BulkProcessor extends BaseComponent {
 
     // Update aspect crop preview if in aspect-crop mode
     const mode = (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value;
-    if (mode === 'aspect-crop' && this.images.length > 0) {
-      this.aspectCropPreview.updateImage(this.images[0]!.file);
+    if (mode === 'aspect-crop') {
+      this.aspectCropPreview.updateImages(this.images);
     }
   }
 
@@ -329,10 +326,8 @@ export class BulkProcessor extends BaseComponent {
 
     if (mode === 'aspect-crop') {
       aspectCropOptions.style.display = 'block';
-      // Update preview with first image if available
-      if (this.images.length > 0) {
-        this.aspectCropPreview.updateImage(this.images[0]!.file);
-      }
+      // Update preview with all images
+      this.aspectCropPreview.updateImages(this.images);
     } else {
       aspectCropOptions.style.display = 'none';
     }
@@ -464,29 +459,9 @@ export class BulkProcessor extends BaseComponent {
     this.updateAspectCropPreview();
   }
 
-  private handleCropPositionChange(): void {
-    const cropPositionX = document.getElementById('cropPositionX') as HTMLInputElement;
-    const cropPositionY = document.getElementById('cropPositionY') as HTMLInputElement;
-    const cropPositionXValue = document.getElementById('cropPositionXValue');
-    const cropPositionYValue = document.getElementById('cropPositionYValue');
-
-    if (cropPositionXValue) {
-      cropPositionXValue.textContent = `${cropPositionX.value}%`;
-    }
-    if (cropPositionYValue) {
-      cropPositionYValue.textContent = `${cropPositionY.value}%`;
-    }
-
-    this.updateAspectCropPreview();
-  }
-
   private updateAspectCropPreview(): void {
     const aspectRatio = this.getCurrentAspectRatio();
-    const cropPositionX = parseFloat((document.getElementById('cropPositionX') as HTMLInputElement)?.value || '50');
-    const cropPositionY = parseFloat((document.getElementById('cropPositionY') as HTMLInputElement)?.value || '50');
-
     this.aspectCropPreview.updateAspectRatio(aspectRatio);
-    this.aspectCropPreview.updatePosition(cropPositionX, cropPositionY);
   }
 
   private getCurrentAspectRatio(): string {
@@ -539,38 +514,56 @@ export class BulkProcessor extends BaseComponent {
     
     const cropTolerance = parseInt((document.getElementById('cropTolerance') as HTMLInputElement)?.value || '10');
 
-    // Aspect ratio crop options (only set when mode is aspect-crop)
-    const aspectRatioOptions = mode === 'aspect-crop' ? {
-      aspectRatio: this.getCurrentAspectRatio(),
-      cropPositionX: parseFloat((document.getElementById('cropPositionX') as HTMLInputElement)?.value || '50'),
-      cropPositionY: parseFloat((document.getElementById('cropPositionY') as HTMLInputElement)?.value || '50')
-    } : {};
+    // Get individual crop positions from the preview when in aspect-crop mode
+    const imagePositions = mode === 'aspect-crop' ? this.aspectCropPreview.getImagePositions() : [];
+    const aspectRatio = mode === 'aspect-crop' ? this.getCurrentAspectRatio() : undefined;
 
-    return this.images.map(img => ({
-      mode,
-      quality,
-      width,
-      height,
-      prefix: img.prefix || globalPrefix,
-      originalName: img.file.name,
-      combineWithOriginalName,
-      useSequentialNumbering,
-      useOriginalFileNames,
-      autoTrim,
-      autoTrimPadding,
-      autoTrimTolerance,
-      autoTrimFixedSize,
-      autoTrimTargetWidth,
-      autoTrimTargetHeight,
-      smartCrop,
-      cropPadding,
-      cropPaddingTop,
-      cropPaddingRight,
-      cropPaddingBottom,
-      cropPaddingLeft,
-      cropTolerance,
-      ...aspectRatioOptions
-    }));
+    // Validate aspect ratio for aspect-crop mode
+    if (mode === 'aspect-crop' && !aspectRatio) {
+      throw new Error('Aspect ratio is required when using aspect-crop mode');
+    }
+
+    return this.images.map((img) => {
+      // Find the corresponding position data for this image
+      const positionData = imagePositions.find(pos => pos.file === img.file);
+
+      const baseOptions = {
+        mode,
+        quality,
+        width,
+        height,
+        prefix: img.prefix || globalPrefix,
+        originalName: img.file.name,
+        combineWithOriginalName,
+        useSequentialNumbering,
+        useOriginalFileNames,
+        autoTrim,
+        autoTrimPadding,
+        autoTrimTolerance,
+        autoTrimFixedSize,
+        autoTrimTargetWidth,
+        autoTrimTargetHeight,
+        smartCrop,
+        cropPadding,
+        cropPaddingTop,
+        cropPaddingRight,
+        cropPaddingBottom,
+        cropPaddingLeft,
+        cropTolerance
+      };
+
+      // Add aspect crop options if in aspect-crop mode
+      if (mode === 'aspect-crop' && aspectRatio) {
+        return {
+          ...baseOptions,
+          aspectRatio,
+          cropPositionX: positionData?.cropPositionX || 50, // Default to center if no position data
+          cropPositionY: positionData?.cropPositionY || 50  // Default to center if no position data
+        };
+      }
+
+      return baseOptions;
+    });
   }
 
   private async processImages(): Promise<void> {
@@ -582,10 +575,13 @@ export class BulkProcessor extends BaseComponent {
     eventBus.emit('bulk-processing-start');
 
     try {
+      console.log('Processing images with options:', options);
       const results = await this.apiService.processImages(files, options);
+      console.log('Processing completed successfully:', results);
       eventBus.emit('bulk-processing-complete', results);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error during image processing:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error occurred during processing';
       eventBus.emit('bulk-processing-error', { message });
     }
   }
@@ -599,30 +595,53 @@ export class BulkProcessor extends BaseComponent {
   private animateProgress(): void {
     const progressFill = document.getElementById('progressFill')!;
     const progressText = document.getElementById('progressText')!;
-    
+
+    // Clear any existing interval
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+    }
+
     let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15;
-      if (progress > 90) {
-        clearInterval(interval);
-        progress = 90;
+    this.progressInterval = setInterval(() => {
+      progress += Math.random() * 10 + 2; // More consistent progress
+      if (progress > 85) {
+        // Stop animation at 85% to leave room for completion
+        clearInterval(this.progressInterval!);
+        progress = 85;
+        this.progressInterval = null;
       }
       progressFill.style.width = `${progress}%`;
       progressText.textContent = `${Math.round(progress)}%`;
     }, 200);
   }
 
-  private hideProgress(): void {
-    const progressOverlay = document.getElementById('progressOverlay')!;
+  private completeProgress(): void {
+    // Clear any existing interval
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+      this.progressInterval = null;
+    }
+
     const progressFill = document.getElementById('progressFill')!;
     const progressText = document.getElementById('progressText')!;
-    
+
+    // Smoothly animate to 100%
     progressFill.style.width = '100%';
     progressText.textContent = '100%';
+  }
+
+  private hideProgress(): void {
+    // First complete the progress
+    this.completeProgress();
+
+    const progressOverlay = document.getElementById('progressOverlay')!;
+    const progressFill = document.getElementById('progressFill')!;
+
+    // Hide after a brief delay to show 100%
     setTimeout(() => {
       progressOverlay.style.display = 'none';
       progressFill.style.width = '0%';
-    }, 500);
+    }, 800);
   }
 
   private showResults(results: ProcessResult[]): void {

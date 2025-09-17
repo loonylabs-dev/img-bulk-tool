@@ -22,24 +22,44 @@ export class ApiService {
     formData.append('options', JSON.stringify(options));
 
     try {
+      console.log('Sending request to /api/process with', files.length, 'files');
+
+      // Add timeout handling - 3 minutes for image processing
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+
       const response = await fetch('/api/process', {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
+      console.log('Received response with status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        throw new Error(`Server error (${response.status}): ${errorText}`);
       }
 
       const data: ApiResponse<ProcessResult[]> = await response.json();
-      
+      console.log('Response data:', data);
+
       if (!data.success || !data.results) {
-        throw new Error(data.error || 'Unknown error occurred');
+        throw new Error(data.error || 'Server returned unsuccessful response');
       }
 
       return data.results;
     } catch (error) {
       console.error('Error processing images:', error);
+
+      // Handle abort error specifically
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out after 3 minutes. Please try again with fewer images or check your connection.');
+      }
+
       throw error;
     }
   }

@@ -10,7 +10,7 @@ import { FileManager } from './lib/fileManager';
 import { ColorAnalyzer } from './lib/colorAnalyzer';
 
 const app = express();
-const DEFAULT_PORT = process.env.PORT ? parseInt(process.env.PORT) : 3002;
+const DEFAULT_PORT = process.env.PORT ? parseInt(process.env.PORT) : 3003;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -31,6 +31,16 @@ const upload = multer({
 });
 
 app.use(cors());
+
+// Request logging middleware
+app.use((req, _res, next) => {
+  console.log(`🌐 [${new Date().toISOString()}] ${req.method} ${req.url}`);
+  if (req.method === 'POST') {
+    console.log(`📦 Request body size: ${req.get('Content-Length') || 'unknown'} bytes`);
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/downloads', express.static(path.join(__dirname, '../output')));
@@ -93,7 +103,10 @@ app.post('/api/process', upload.array('images', 200), async (req: Request, res: 
   try {
     const files = req.files as Express.Multer.File[];
     const options: ProcessOptions[] = JSON.parse(req.body.options);
-    
+
+    console.log(`=== Starting batch processing: ${files.length} files ===`);
+    console.log('Options:', JSON.stringify(options, null, 2));
+
     if (!files || files.length === 0) {
       return res.status(400).json({ error: 'No images uploaded' });
     }
@@ -105,6 +118,9 @@ app.post('/api/process', upload.array('images', 200), async (req: Request, res: 
       const file = files[i];
       const option = options[i] || options[0];
       const processedFiles = [];
+
+      try {
+        console.log(`=== Processing file ${i + 1}/${files.length}: ${file.originalname} ===`);
 
       // Determine the actual prefix to use
       let actualPrefix = option.prefix;
@@ -313,19 +329,42 @@ app.post('/api/process', upload.array('images', 200), async (req: Request, res: 
             throw new Error('Aspect ratio is required for aspect-crop mode');
           }
 
+          console.log(`Processing aspect-crop for ${file.originalname}: ${option.aspectRatio} at (${option.cropPositionX || 50}%, ${option.cropPositionY || 50}%)`);
+
           const aspectRatioCropped = await imageProcessor.cropToAspectRatio(processBuffer, {
             aspectRatio: option.aspectRatio,
             positionX: option.cropPositionX || 50, // Default to center
             positionY: option.cropPositionY || 50  // Default to center
           });
 
+          console.log(`Aspect ratio crop completed for ${file.originalname}`);
+
+          // Validate cropped buffer
+          if (!aspectRatioCropped || aspectRatioCropped.length === 0) {
+            throw new Error('Cropped image buffer is empty or invalid');
+          }
+          console.log(`Cropped buffer valid: ${aspectRatioCropped.length} bytes`);
+
           const filenameAspectCrop = await fileManager.getUniqueFilename(
             actualPrefix,
             option.useOriginalFileNames || option.useSequentialNumbering === false ? 0 : globalCounter++,
             option.useOriginalFileNames ? false : option.useSequentialNumbering !== false
           );
+          console.log(`Generated filename: ${filenameAspectCrop}`);
+
+          console.log(`Starting compression with quality: ${option.quality || 100}`);
           const compressedAspectCrop = await compressor.compressPNG(aspectRatioCropped, option.quality || 100);
+
+          // Validate compressed buffer
+          if (!compressedAspectCrop || compressedAspectCrop.length === 0) {
+            throw new Error('Compressed image buffer is empty or invalid');
+          }
+          console.log(`Compression completed: ${aspectRatioCropped.length} -> ${compressedAspectCrop.length} bytes`);
+
+          console.log(`Starting file save operation...`);
           await fileManager.saveFile(compressedAspectCrop, filenameAspectCrop);
+          console.log(`File saved successfully: ${filenameAspectCrop} (${compressedAspectCrop.length} bytes)`);
+
           processedFiles.push({
             filename: filenameAspectCrop,
             url: `/downloads/${filenameAspectCrop}`,
@@ -336,17 +375,50 @@ app.post('/api/process', upload.array('images', 200), async (req: Request, res: 
           throw new Error(`Unbekannter Modus: ${option.mode}`);
       }
 
-      results.push({
-        original: file.originalname,
-        originalSize: file.size,
-        processed: processedFiles
-      });
+        console.log(`Successfully processed file: ${file.originalname} -> ${processedFiles.length} output files`);
+
+        results.push({
+          original: file.originalname,
+          originalSize: file.size,
+          processed: processedFiles
+        });
+
+      } catch (fileError) {
+        console.error(`Error processing file ${file.originalname}:`, fileError);
+
+        // Add failed file to results with error information
+        results.push({
+          original: file.originalname,
+          originalSize: file.size,
+          processed: [],
+          error: fileError instanceof Error ? fileError.message : 'Unknown processing error'
+        });
+      }
     }
 
-    res.json({ success: true, results });
+    console.log(`=== Batch processing completed: ${results.length} results ===`);
+    console.log('Results summary:', results.map(r => ({ original: r.original, files: r.processed.length })));
+
+    // Ensure response is sent
+    console.log('Sending response to client...');
+
+    const response = { success: true, results };
+    console.log('Response size:', JSON.stringify(response).length, 'bytes');
+
+    res.status(200).json(response);
+
+    console.log('Response sent successfully');
   } catch (error) {
     console.error('Processing error:', error);
-    res.status(500).json({ error: 'Image processing error' });
+
+    // Ensure we always return a proper JSON response
+    const errorMessage = error instanceof Error ? error.message : 'Unknown image processing error';
+
+    res.status(500).json({
+      success: false,
+      error: errorMessage,
+      details: error instanceof Error ? error.stack : 'No stack trace available'
+    });
   }
 });
 
