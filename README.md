@@ -43,8 +43,13 @@ npm run dev
 - **Image Splitting**: Split square images into 4 equal parts
 - **Compression**: PNG compression (adjustable quality 50-100%, default: 100%)
 - **Resizing**: Scale images to any target size
+- **Aspect Ratio Crop**: Crop images to specific aspect ratios with interactive preview
+  - **Preset Ratios**: 16:9, 16:10, 4:3, 1:1, 9:16, 3:4 + Custom ratios
+  - **Multi-Image Preview**: Live canvas preview with individual crop positioning
+  - **Interactive Drag & Drop**: Adjust crop position per image with visual feedback
+  - **Crop Overlay**: Visual crop area with red border and corner handles
 - **Auto-Trim**: Automatically remove transparent areas
-  - Configurable minimal padding (0-50px, default: 2px)  
+  - Configurable minimal padding (0-50px, default: 2px)
   - Adjustable detection tolerance (5-100, default: 100)
   - **Fixed Target Size after Auto-Trim**: Scale trimmed images to exact dimensions while preserving proportions
 - **Smart Crop**: Intelligent content detection with configurable padding (uniform or individual sides)
@@ -86,7 +91,7 @@ npm run dev
 
 ```bash
 # Clone the repository
-git clone [your-repo-url]
+git clone https://github.com/loonylabs-dev/img-bulk-tool.git
 cd img-bulk-tool
 
 # Install dependencies
@@ -109,6 +114,7 @@ npm start
    - **Resize**: Scale to desired dimensions
    - **Compress Only**: Reduce file size without resizing
    - **Split + Resize**: Combine both operations
+   - **Aspect Ratio Crop**: Crop to specific aspect ratios with interactive positioning
 3. **Configure Options**:
    - Set quality (50-100%, default: 100%)
    - Enable **Auto-Trim** for automatic transparent area removal
@@ -157,6 +163,23 @@ npm start
 6. **Start Processing**: Click "🎨 Start Color Matching"
 7. **Download Results**: Individual files or all at once
 
+### Aspect Ratio Crop
+
+1. **Upload Images**: Drag & drop or file selection (max. 20 images)
+2. **Select Aspect Ratio Crop Mode**: Choose "🎯 Aspect Ratio Crop" option
+3. **Choose Aspect Ratio**:
+   - **Preset Options**: 16:9 (Widescreen), 16:10 (Monitor), 4:3 (Classic), 1:1 (Square), 9:16 (Portrait), 3:4 (Portrait Classic)
+   - **Custom Ratio**: Define your own width:height ratio
+4. **Interactive Crop Preview**:
+   - **Multi-Image Grid**: See all uploaded images with crop overlays
+   - **Visual Feedback**: Red crop borders with corner handles
+   - **Drag to Position**: Click and drag within crop areas to adjust positioning per image
+   - **Live Updates**: Instant preview of crop changes
+5. **Configure Quality**: Set compression level (50-100%)
+6. **Add Filename Prefix**: Optional prefix for output files
+7. **Process Images**: Click "Process Images" to apply crops
+8. **Download Results**: Individual cropped images or batch download
+
 ## 🏗️ Architecture
 
 ### Backend (`src/`)
@@ -175,10 +198,11 @@ npm start
 - **css/**: Responsive styling with grid layouts
 
 ### Key Data Flow
-1. Frontend uploads files via FormData to `/api/process`, `/api/layer-process`, or `/api/color-match`
-2. Backend processes images based on mode-specific logic
-3. Files saved to `output/` with collision-safe naming: `[prefix]_[number].png`
-4. Results returned with download URLs and file metadata
+1. Frontend uploads files via FormData to `/api/process` (bulk processing with aspect-crop support), `/api/layer-process`, or `/api/color-match`
+2. Backend processes images based on mode-specific logic (`split`, `resize`, `compress`, `split-resize`, `aspect-crop`)
+3. For aspect-crop mode: Individual crop positions and aspect ratio parameters sent with request
+4. Files saved to `output/` with collision-safe naming: `[prefix]_[number].png`
+5. Results returned with download URLs and file metadata
 
 ## 📁 File Naming
 

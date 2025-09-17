@@ -3,6 +3,15 @@
   "version": "1.0.0",
   "description": "Bildbearbeitungs-Tool für Zerlegung, Komprimierung und Größenänderung",
   "main": "dist/server.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/loonylabs-dev/img-bulk-tool.git"
+  },
+  "homepage": "https://github.com/loonylabs-dev/img-bulk-tool",
+  "bugs": {
+    "url": "https://github.com/loonylabs-dev/img-bulk-tool/issues"
+  },
+  "author": "loonylabs-dev",
   "scripts": {
     "build": "npm run build:backend && npm run build:frontend",
     "build:backend": "tsc",
